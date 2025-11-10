@@ -256,9 +256,6 @@ GLint TextureFromFile(const char* path, string /*directory*/)
     }
     else
     {
-        // Si no, asumimos que es relativo a la carpeta Textures/
-        // y concatenamos:
-        //   "Textures/" + p
         fullPath = texPrefix + p;
     }
 
@@ -272,8 +269,10 @@ GLint TextureFromFile(const char* path, string /*directory*/)
     {
         std::cout << "ERROR::TEXTURE_LOADING::FAILED " << fullPath
             << " (from '" << p << "')" << std::endl;
+        glDeleteTextures(1, &textureID);
         return 0;
     }
+
 
     GLenum format = GL_RGB;
     if (channels == 1)       format = GL_RED;
