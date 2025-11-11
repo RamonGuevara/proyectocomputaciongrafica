@@ -1,160 +1,120 @@
 #pragma once
 
-#include <string>
-#include <sstream>
-#include <iostream>
 #include <vector>
-
+#include <iostream>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-
 #include "Shader.h"
+#include "Texture.h"
+#include "Model.h"
 
-using namespace std;
-
-struct Vertex
-{
-    glm::vec3 Position;  // Posición del vértice
-    glm::vec3 Normal;    // Normal
-    glm::vec2 TexCoords; // Coordenadas de textura
-};
-
-struct Texture
-{
-    GLuint id;
-    string type; // "texture_diffuse" o "texture_specular"
-    aiString path;
+struct Vertex {
+    glm::vec3 Position;
+    glm::vec3 Normal;
+    glm::vec2 TexCoords;
 };
 
 class Mesh
 {
 public:
-    // Datos del mesh
-    vector<Vertex>  vertices;
-    vector<GLuint>  indices;
-    vector<Texture> textures;
+    std::vector<Vertex>  vertices;
+    std::vector<GLuint>  indices;
+    std::vector<Texture> textures;
+    GLuint VAO, VBO, EBO;
 
-    // Constructor
-    Mesh(vector<Vertex> vertices, vector<GLuint> indices, vector<Texture> textures)
+    Mesh(std::vector<Vertex> vertices,
+        std::vector<GLuint> indices,
+        std::vector<Texture> textures)
     {
-        this->vertices = vertices;
-        this->indices = indices;
-        this->textures = textures;
+        this->vertices = std::move(vertices);
+        this->indices = std::move(indices);
+        this->textures = std::move(textures);
 
-        // Configura buffers y atributos
-        this->setupMesh();
+        VAO = VBO = EBO = 0;
+        setupMesh();
     }
 
-    // Renderiza el mesh con el shader dado
     void Draw(Shader shader)
     {
-
-        if (indices.empty() || VAO == 0)
+        // Si la mesh es inválida, no intentamos dibujarla
+        if (VAO == 0 || indices.empty())
             return;
 
         GLuint diffuseNr = 1;
         GLuint specularNr = 1;
 
-        // Vincula texturas
-        for (GLuint i = 0; i < this->textures.size(); i++)
+        for (GLuint i = 0; i < textures.size(); i++)
         {
             glActiveTexture(GL_TEXTURE0 + i);
 
-            stringstream ss;
-            string number;
-            string name = this->textures[i].type;
+            std::string number;
+            std::string name = textures[i].type;
 
             if (name == "texture_diffuse")
-            {
-                ss << diffuseNr++;
-            }
+                number = std::to_string(diffuseNr++);
             else if (name == "texture_specular")
-            {
-                ss << specularNr++;
-            }
+                number = std::to_string(specularNr++);
 
-            number = ss.str();
+            std::string uniformName = name + number;
+            GLint loc = glGetUniformLocation(shader.Program, uniformName.c_str());
+            if (loc != -1)
+                glUniform1i(loc, i);
 
-            // Nombre esperado en el shader: texture_diffuse1, texture_specular1, etc.
-            string uniformName = name + number;
-            glUniform1i(glGetUniformLocation(shader.Program, uniformName.c_str()), i);
-            glBindTexture(GL_TEXTURE_2D, this->textures[i].id);
+            glBindTexture(GL_TEXTURE_2D, textures[i].id);
         }
 
-        // Shininess por defecto (si no lo sobreescribes afuera)
-        glUniform1f(glGetUniformLocation(shader.Program, "material.shininess"), 16.0f);
-
-        // Dibuja
-        glBindVertexArray(this->VAO);
-        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(this->indices.size()), GL_UNSIGNED_INT, 0);
+        glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
 
-        // Limpia unidades de textura
-        for (GLuint i = 0; i < this->textures.size(); i++)
-        {
-            glActiveTexture(GL_TEXTURE0 + i);
-            glBindTexture(GL_TEXTURE_2D, 0);
-        }
+        glActiveTexture(GL_TEXTURE0);
     }
 
 private:
-    // Render data
-    GLuint VAO, VBO, EBO;
-
-    // Inicializa VAO / VBO / EBO
     void setupMesh()
     {
-        glGenVertexArrays(1, &this->VAO);
-        glGenBuffers(1, &this->VBO);
-        glGenBuffers(1, &this->EBO);
+        //  Punto crítico: si no hay datos, NO creamos buffers.
+        if (vertices.empty() || indices.empty())
+        {
+            std::cout << "Mesh::setupMesh -> Mesh vacia (vertices="
+                << vertices.size() << ", indices=" << indices.size()
+                << "), se omite VAO." << std::endl;
+            VAO = VBO = EBO = 0;
+            return;
+        }
 
-        glBindVertexArray(this->VAO);
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+        glGenBuffers(1, &EBO);
 
-        // Vértices
-        glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
+        glBindVertexArray(VAO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER,
-            this->vertices.size() * sizeof(Vertex),
-            &this->vertices[0],
+            vertices.size() * sizeof(Vertex),
+            vertices.data(),                // seguro: no está vacío
             GL_STATIC_DRAW);
 
-        // Índices
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->EBO);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-            this->indices.size() * sizeof(GLuint),
-            &this->indices[0],
+            indices.size() * sizeof(GLuint),
+            indices.data(),                 // seguro
             GL_STATIC_DRAW);
 
-        // Atributos de vértice:
-        // layout (location = 0) -> Position
+        // layout posición
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0,
-            3,
-            GL_FLOAT,
-            GL_FALSE,
-            sizeof(Vertex),
-            (GLvoid*)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+            sizeof(Vertex), (GLvoid*)offsetof(Vertex, Position));
 
-        // layout (location = 1) -> Normal
+        // layout normal
         glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1,
-            3,
-            GL_FLOAT,
-            GL_FALSE,
-            sizeof(Vertex),
-            (GLvoid*)offsetof(Vertex, Normal));
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
+            sizeof(Vertex), (GLvoid*)offsetof(Vertex, Normal));
 
-        // layout (location = 2) -> TexCoords
+        // layout texcoords
         glEnableVertexAttribArray(2);
-        glVertexAttribPointer(2,
-            2,
-            GL_FLOAT,
-            GL_FALSE,
-            sizeof(Vertex),
-            (GLvoid*)offsetof(Vertex, TexCoords));
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
+            sizeof(Vertex), (GLvoid*)offsetof(Vertex, TexCoords));
 
         glBindVertexArray(0);
     }
