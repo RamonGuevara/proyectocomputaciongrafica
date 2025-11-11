@@ -116,7 +116,7 @@ int main()
     Model CiervoRamas((char*)"Ciervo_arbustoramas.obj");
     Model ArbustosReja((char*)"Arbustos_reja.obj");
     Model Pinos((char*)"PinosHojas.obj");
-    Model PinosRama((char*)"PinosRama.obj");
+    Model PinosRama((char*)"Models/PinosRama.obj");
     Model Aviario((char*)"Aviario.obj");
     Model AviarioV((char*)"VidrioAviario.obj");
     Model Flores((char*)"Flores.obj");
@@ -126,6 +126,34 @@ int main()
     Model BabyDeerBody((char*)"CiervoBebe.obj");
     Model BabyDeerNeck((char*)"CiervoBebeCuello.obj");
     Model BabyDeerHead((char*)"CiervoBebeCabeza.obj");
+
+    // Pinguino
+    Model pinguH((char*)"pingu_head.obj");
+    Model pinguB((char*)"pingu_body.obj");
+    Model pinguW((char*)"pingu_wings.obj");
+
+    // Piraña
+    Model piranhaH((char*)"CabezaPirana.obj");
+    Model piranhaT((char*)"ColaPirana.obj");
+
+    // Foca
+    Model sealB((char*)"seal_body.obj");
+    Model sealH((char*)"seal_head.obj");
+    Model sealHS((char*)"seal_hands.obj");
+    Model sealT((char*)"seal_tail.obj");
+
+    // Oso polar
+    Model pBearH((char*)"Polar_Bear_body.obj");
+    Model pBearB((char*)"Polar_Bear_head.obj");
+    Model pBearFR((char*)"Polar_Bear_FR_Leg.obj");
+    Model pBearFL((char*)"Polar_Bear_FL_Leg.obj");
+    Model pBearBR((char*)"Polar_Bear_BR_Leg.obj");
+    Model pBearBL((char*)"Polar_Bear_BL_Leg.obj");
+
+    // Tiburón
+    Model sharkB((char*)"Tiburon1_torso.obj");
+    Model sharkH((char*)"Tiburon1.obj");
+    Model sharkT((char*)"Tiburon1_cola.obj");
 
     // Skybox
     GLfloat skyboxVertices[] = {
@@ -583,6 +611,92 @@ int main()
             BabyDeerBody.Draw(lightingShader);
             BabyDeerNeck.Draw(lightingShader);
             BabyDeerHead.Draw(lightingShader);
+        }
+
+        // ----- PINGÜINO -----
+        {
+            glm::mat4 modelPingu(1.0f);
+            modelPingu = glm::translate(modelPingu, glm::vec3(-1.5f, 0.0f, 1.5));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelPingu));
+            pinguB.Draw(lightingShader);
+            //Head
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelPingu));
+            pinguH.Draw(lightingShader);
+            //Wings
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelPingu));
+            pinguW.Draw(lightingShader);
+        }
+
+        // ----- PIRAÑA ------
+        {
+            //Head
+            glm::mat4 modelPira(1.0f);
+            modelPira = glm::translate(modelPira, glm::vec3(-1.0f, 0.0f, 0.0f));
+            modelPira = glm::scale(modelPira, glm::vec3(0.3f, 0.3f, 0.3f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelPira));
+            piranhaH.Draw(lightingShader);
+            //Tail
+            modelTemp = modelPira;
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelPira));
+            piranhaT.Draw(lightingShader);
+        }
+
+        // ------- FOCA ------
+        {
+            //Body
+            glm::mat4 modelFoca(1.0f);
+            modelFoca = glm::translate(modelFoca, glm::vec3(0.0f, 0.0f, -1.0f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelFoca));
+            sealB.Draw(lightingShader);
+            //Head
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelFoca));
+            sealH.Draw(lightingShader);
+            //Hands
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelFoca));
+            sealHS.Draw(lightingShader);
+            //Tail
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelFoca));
+            sealT.Draw(lightingShader);
+        }
+
+        // ------ OSO POLAR -------
+        {
+            //Body
+            glm::mat4 modelOSO(1.0f);
+            modelOSO = glm::translate(modelOSO, glm::vec3(2.0f, 0.0f, 0.0f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelOSO));
+            pBearB.Draw(lightingShader);
+            //Head
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelOSO));
+            pBearH.Draw(lightingShader);
+            //Front Right Leg
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelOSO));
+            pBearFR.Draw(lightingShader);
+            //Front Left Leg
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelOSO));
+            pBearFL.Draw(lightingShader);
+            //Back Right Leg
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelOSO));
+            pBearBR.Draw(lightingShader);
+            //Back Left Leg
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelOSO));
+            pBearBL.Draw(lightingShader);
+        }
+
+        // ------- TIBURÓN ----
+        {
+            //Body
+            glm::mat4 modelTibu(1.0f);
+            modelTibu = glm::translate(modelTibu, glm::vec3(0.0f, 0.0f, 1.0f));
+            modelTibu = glm::scale(modelTibu, glm::vec3(0.01f, 0.01f, 0.01f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelTibu));
+            sharkB.Draw(lightingShader);
+            //Head
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelTibu));
+            sharkH.Draw(lightingShader);
+            //Tail
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelTibu));
+            sharkT.Draw(lightingShader);
         }
 
         // ----- SKYBOX -----

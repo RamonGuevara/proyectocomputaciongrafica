@@ -1,0 +1,13 @@
+# Blender 4.5.4 LTS MTL File: 'Polar_Bear.blend'
+# www.blender.org
+
+newmtl Polar_Bear_Quad_Material
+Ka 1.000000 1.000000 1.000000
+Ks 0.050000 0.050000 0.050000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd Polar_Bear_Quad_Diffuse.png
+map_Ns Polar_Bear_Quad_Roughness.png
+map_Bump -bm 1.000000 Polar_Bear_Quad_Normal.png

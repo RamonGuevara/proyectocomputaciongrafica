@@ -50,7 +50,7 @@ public:
     }
 
     // Renderiza el mesh con el shader dado
-    void Draw(Shader shader)
+    void Draw(Shader& shader)
     {
         GLuint diffuseNr = 1;
         GLuint specularNr = 1;
@@ -80,9 +80,6 @@ public:
             glUniform1i(glGetUniformLocation(shader.Program, uniformName.c_str()), i);
             glBindTexture(GL_TEXTURE_2D, this->textures[i].id);
         }
-
-        // Shininess por defecto (si no lo sobreescribes afuera)
-        glUniform1f(glGetUniformLocation(shader.Program, "material.shininess"), 16.0f);
 
         // Dibuja
         glBindVertexArray(this->VAO);

@@ -47,8 +47,7 @@ public:
         this->loadModel(realPath);
     }
 
-    // Dibuja todas las meshes del modelo
-    void Draw(Shader shader)
+    void Draw(Shader& shader)
     {
         for (GLuint i = 0; i < this->meshes.size(); i++)
         {
@@ -256,9 +255,6 @@ GLint TextureFromFile(const char* path, string /*directory*/)
     }
     else
     {
-        // Si no, asumimos que es relativo a la carpeta Textures/
-        // y concatenamos:
-        //   "Textures/" + p
         fullPath = texPrefix + p;
     }
 
@@ -272,7 +268,7 @@ GLint TextureFromFile(const char* path, string /*directory*/)
     {
         std::cout << "ERROR::TEXTURE_LOADING::FAILED " << fullPath
             << " (from '" << p << "')" << std::endl;
-        return 0;
+        return 0;   
     }
 
     GLenum format = GL_RGB;
