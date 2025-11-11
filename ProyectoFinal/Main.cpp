@@ -62,6 +62,12 @@ float pinguTime = 0.0f;
 float pinguHead_A = 0.0f;
 float pinguWings_A = 0.0f;
 
+// Animación foca
+float sealTime = 0.0f;
+float sealHead_A = 0.0f;  // rotación cabeza arriba/abajo
+float sealHands_A = 0.0f;  // rotación aletas adelante/atrás
+
+
 glm::mat4 modelTemp(1.0f);
 
 // Mundo: +Z frente, -Z atrás, +X derecha, -X izquierda, +Y arriba
@@ -654,28 +660,21 @@ int main()
                 pinguH.Draw(lightingShader);
             }
 
-            // ----- Alas -----
+            // ----- Alas (malla con ambas alas) -----
             {
-                // pivotes aproximados para las alas
-                const glm::vec3 WING_LEFT_PIVOT(0.0f, 1.0f, 0.0f);
-                const glm::vec3 WING_RIGHT_PIVOT(0.0f, 1.0f, 0.0f);
+                glm::mat4 m = modelPingu;
 
-                // Ala izquierda
-                glm::mat4 left = modelPingu;
-                left = glm::translate(left, WING_LEFT_PIVOT);
-                left = glm::rotate(left, glm::radians(pinguWings_A), glm::vec3(0.0f, 0.0f, 1.0f));
-                left = glm::translate(left, -WING_LEFT_PIVOT);
-                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(left));
-                pinguW.Draw(lightingShader);
+                // Pivote aprox a la altura de los hombros del pingüino
+                const glm::vec3 WINGS_PIVOT(0.0f, 0.9f, 0.0f);
 
-                // Ala derecha (inversa)
-                glm::mat4 right = modelPingu;
-                right = glm::translate(right, WING_RIGHT_PIVOT);
-                right = glm::rotate(right, glm::radians(-pinguWings_A), glm::vec3(0.0f, 0.0f, 1.0f));
-                right = glm::translate(right, -WING_RIGHT_PIVOT);
-                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(right));
+                m = glm::translate(m, WINGS_PIVOT);
+                m = glm::rotate(m, glm::radians(pinguWings_A), glm::vec3(1.0f, 0.0f, 1.0f));
+                m = glm::translate(m, -WINGS_PIVOT);
+
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m));
                 pinguW.Draw(lightingShader);
             }
+
         }
         // ----- PIRAÑA ------
         {
@@ -693,20 +692,64 @@ int main()
 
         // ------- FOCA ------
         {
-            //Body
-            glm::mat4 modelFoca(1.0f);
-            modelFoca = glm::translate(modelFoca, glm::vec3(0.0f, 0.0f, -1.0f));
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelFoca));
+            glm::mat4 base(1.0f);
+
+            // Posición general de la foca (ajusta donde la quieras)
+            base = glm::translate(base, glm::vec3(15.0f, 0.5f, 12.5f));
+            base = glm::rotate(base, glm::radians(-90.0f), glm::vec3(0,1,0)); // si necesitas orientarla
+            base = glm::scale(base, glm::vec3(2.5f));                     // si quieres ajustar tamaño
+
+            // ----- Cuerpo -----
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(base));
             sealB.Draw(lightingShader);
-            //Head
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelFoca));
-            sealH.Draw(lightingShader);
-            //Hands
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelFoca));
-            sealHS.Draw(lightingShader);
-            //Tail
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelFoca));
-            sealT.Draw(lightingShader);
+
+            // ----- Cabeza (arriba/abajo) -----
+            {
+                glm::mat4 m = base;
+
+                // Pivote aprox donde se une el cuello con el cuerpo (ajusta a ojo)
+                const glm::vec3 HEAD_PIVOT(0.0f, 0.35f, 0.7f);
+
+                m = glm::translate(m, HEAD_PIVOT);
+                m = glm::rotate(m, glm::radians(sealHead_A), glm::vec3(1.0f, 0.0f, 0.0f));
+                m = glm::translate(m, -HEAD_PIVOT);
+
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m));
+                sealH.Draw(lightingShader);
+            }
+
+            // ----- Manos / aletas delanteras (adelante/atrás) -----
+            {
+                glm::mat4 m = base;
+
+                // Si sealHS tiene ambas aletas juntas, usa un pivote central.
+                // Si son separadas en el mismo modelo, igual funciona visualmente.
+                const glm::vec3 HANDS_PIVOT(0.0f, 0.15f, 0.3f);
+
+                m = glm::translate(m, HANDS_PIVOT);
+                m = glm::rotate(m, glm::radians(sealHands_A), glm::vec3(1.0f, 0.0f, 0.0f));
+                m = glm::translate(m, -HANDS_PIVOT);
+
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m));
+                sealHS.Draw(lightingShader);
+            }
+
+            // ----- Cola (opcional: pequeña oscilación) -----
+            {
+                glm::mat4 m = base;
+
+                // Pivote aprox en la base de la cola
+                const glm::vec3 TAIL_PIVOT(0.0f, 0.1f, -0.6f);
+
+                float tail_A = std::sin(sealTime * 1.5f) * 8.0f;
+
+                m = glm::translate(m, TAIL_PIVOT);
+                m = glm::rotate(m, glm::radians(tail_A), glm::vec3(0.0f, 1.0f, 0.0f));
+                m = glm::translate(m, -TAIL_PIVOT);
+
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m));
+                sealT.Draw(lightingShader);
+            }
         }
 
         // ------ OSO POLAR -------
@@ -936,6 +979,18 @@ void Animation()
     pinguWings_A = std::sin(pinguTime) * 35.0f; // +/-25 grados
     // cabeza en oposición de fase (cuando alas van atrás, cabeza adelante)
     pinguHead_A = std::sin(pinguTime + glm::pi<float>()) * 15.0f; // +/-15 grados
+
+    // ----- FOCA: arrastrándose -----
+    sealTime += deltaTime * 2.5f; // velocidad de ciclo
+
+    // Manos/aletitas: adelante y atrás (como paletas)
+    // seno -> movimiento suave; rango aprox [-30, 30]
+    sealHands_A = std::sin(sealTime) * 30.0f;
+
+    // Cabeza: arriba/abajo en contrafase a las manos
+    // cuando las manos empujan hacia atrás, la cabeza sube
+    sealHead_A = std::sin(sealTime + glm::pi<float>()) * 15.0f;
+
 }
 
 void CrearObjeto(GLuint& VAO, GLuint& VBO, GLuint& EBO,
