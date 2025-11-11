@@ -39,6 +39,7 @@ bool puertaAbierta = false;
 float rotPuerta = 0.0f;
 float velocidadPuerta = 1.0f;
 
+//Animaciones ciervos
 glm::vec3 ciervoPos(0.0f, 0.0f, 0.0f);
 float ciervoRot = 0.0f;
 float head = 0.0f;
@@ -56,6 +57,49 @@ float ciervoTurnSpeed = 2.0f;   // grados por frame (giro)
 
 bool puertaTogglePressed = false;
 bool ciervoTogglePressed = false;
+
+//Animaciones pajaros
+glm::vec3 pajaro1pos(0.0f, 0.0f, 0.0f);
+glm::vec3 tucan(0.0f, 0.0f, 0.0f);
+float pajaro1Rot = 0.0f;
+float ala1 = 0.0f;
+float ala2 = 0.0f;
+bool pajaro1Anim = false;
+bool pajaro1step = false;
+bool  pajaro1TogglePressed = false;   // para la tecla de toggle de todos los pajaros
+
+glm::vec3 pajaro2pos(0.0f, 0.0f, 0.0f);
+bool pajaro2Anim = false;
+bool pajaro2step = false;
+float pajaro2Rot = 0.0f;
+float pajaro2head = 0.0f;
+float pajaro2tail = 0.0f;
+
+
+glm::vec3 pajaro3pos(0.0f, 0.0f, 0.0f);
+bool pajaro3Anim = false;
+bool pajaro3step = false;
+float pajaro3Rot = 0.0f;
+float pajaro3head = 0.0f;
+float pajaro3tail = 0.0f;
+float pico1 = 0.0f;
+float pico2 = 0.0f;
+const float picoMax = 12.0f;   // apertura máxima 
+const float picoVel = 0.2f;    // velocidad de apertura
+
+//  parámetros de vuelo
+float flyAmpX = 0.6f;   // movimiento lateral (x)
+float flyAmpY = 0.5f;   // subir/bajar (y)
+float flyYawAmp = 8.0f;  // giro suave (yaw)
+float flyHoverY = 0.6f;
+
+// velocidades (grados/frame para alas; rad/frame para fase)
+float wingAmp = 45.0f;  // amplitud de aleteo (±45°)
+float wingHz = 0.45f;  // velocidad de aleteo
+float flyHz = 0.05f;  // velocidad del ciclo de vuelo (trayectoria)
+
+// fase interna
+float pajaroPhase = 0.0f;
 
 // Animacin oso polar
 float pBearWalkTime = 0.0f;
@@ -135,6 +179,7 @@ int main()
     Model PuertaDer((char*)"PuertaDer.obj");
     Model PuertaIzq((char*)"PuertaIzq.obj");
     Model Rejas((char*)"Rejas.obj");
+    Model Cajas((char*)"cajas.obj");
 
     // Ciervo adulto
     Model CiervoBody((char*)"Ciervo_cuerpo.obj");
@@ -154,6 +199,8 @@ int main()
     Model AviarioV((char*)"VidrioAviario.obj");
     Model Flores((char*)"Flores.obj");
     Model Banca((char*)"BancasMadera.obj");
+    Model ArbolAv((char*)"aviarioarbol.obj");
+    Model HojasAv((char*)"hojasaviario.obj");
 
     // Ciervo beb
     Model BabyDeerBody((char*)"CiervoBebe.obj");
@@ -191,6 +238,21 @@ int main()
 
     // Iglu
     Model Iglu((char*)"Iglu.obj");
+
+    //Pajaros
+    Model Pajaro1Body((char*)"pajaro1body.obj");
+    Model Pajaro1AlaDer((char*)"pajaro1der.obj");
+    Model Pajaro1AlaIzq((char*)"pajaro1izq.obj");
+
+    Model Pajaro2Body((char*)"pajaro2body.obj");
+    Model Pajaro2Head((char*)"pajaro2head.obj");
+    Model Pajaro2Tail((char*)"pajaro2tail.obj");
+
+    Model TucanBody((char*)"tucanbody.obj");
+    Model TucanHead((char*)"tucanhead.obj");
+    Model TucanTail((char*)"tucantail.obj");
+    Model TucanPico1((char*)"tucanpicoup.obj");
+    Model TucanPico2((char*)"tucanpicodown.obj");
 
     // Skybox
     GLfloat skyboxVertices[] = {
@@ -591,18 +653,120 @@ int main()
             modelTemp2 = model1;
             model1 = modelTemp2;
             model1 = glm::translate(model1, glm::vec3(-15.32, 2.7725f, 19.114f));
-            model1 = glm::rotate(model1, glm::radians(head2), glm::vec3(0.1f, 0.0f, 0.0f));
+            model1 = glm::rotate(model1, glm::radians(head2), glm::vec3(0.5f, 0.0f, 0.0f));
             model1 = glm::translate(model1, glm::vec3(15.32, -2.7725f, -19.114f));
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model1));
             BabyDeerHead.Draw(lightingShader);
         }
 
+        // ----- PAJARO1 -----
+        {
+            glm::mat4 modelPajaro1(1.0f);
+            modelPajaro1 = glm::translate(modelPajaro1, glm::vec3(17.06f, 8.834f, -10.47f));
+            modelPajaro1 = glm::translate(modelPajaro1, pajaro1pos);
+            modelPajaro1 = glm::rotate(modelPajaro1, glm::radians(pajaro1Rot), glm::vec3(0.0f, 1.0f, 0.0f));
+            modelPajaro1 = glm::translate(modelPajaro1, glm::vec3(-17.06f, -8.834f, 10.47f));
+            modelTemp = modelPajaro1;
+            // Cuerpo
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelPajaro1));
+            Pajaro1Body.Draw(lightingShader);
+
+            glm::mat4 model = modelTemp;
+            model = glm::translate(model, glm::vec3(16.38f, 9.123f, -10.18f));
+            model = glm::rotate(model, glm::radians(ala1), glm::vec3(1.0f, 0.0f, 0.0f));
+            model = glm::translate(model, glm::vec3(-16.38f, -9.123f, 10.18f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            Pajaro1AlaDer.Draw(lightingShader);
+
+            model = modelTemp;
+            model = glm::translate(model, glm::vec3(16.66f, 9.126f, -10.98f));
+            model = glm::rotate(model, glm::radians(ala2), glm::vec3(1.0f, 0.0f, 0.0f));
+            model = glm::translate(model, glm::vec3(-16.66f, -9.126f, 10.98f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            Pajaro1AlaIzq.Draw(lightingShader);
+        }
+
+        // ----- PAJARO2 -----
+        {
+            glm::mat4 modelPajaro2(1.0f);
+            modelPajaro2 = glm::translate(modelPajaro2, glm::vec3(22.13f, 10.55f, -16.83f));
+            modelPajaro2 = glm::translate(modelPajaro2, pajaro2pos);
+            modelPajaro2 = glm::rotate(modelPajaro2, glm::radians(pajaro2Rot), glm::vec3(0.0f, 1.0f, 0.0f));
+            modelPajaro2 = glm::translate(modelPajaro2, glm::vec3(-22.13f, -10.55f, 16.83f));
+            modelTemp = modelPajaro2;
+            // Cuerpo
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelPajaro2));
+            Pajaro2Body.Draw(lightingShader);
+
+            glm::mat4 model = modelTemp;
+            model = glm::translate(model, glm::vec3(22.22f, 11.0f, -16.87f));
+            model = glm::rotate(model, glm::radians(pajaro2head), glm::vec3(0.0f, 0.0f, 1.0f));
+            model = glm::translate(model, glm::vec3(-22.22f, -11.0f, 16.87f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            Pajaro2Head.Draw(lightingShader);
+
+            model = modelTemp;
+            model = glm::translate(model, glm::vec3(21.11f, 9.278f, -17.48f));
+            model = glm::rotate(model, glm::radians(pajaro2tail), glm::vec3(0.0f, 0.0f, 1.0f));
+            model = glm::translate(model, glm::vec3(-21.11f, -9.278f, 17.48f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            Pajaro2Tail.Draw(lightingShader);
+        }
+
+        // ----- TUCAN -----
+        {
+            glm::mat4 modelPajaro3(1.0f);
+            modelPajaro3 = glm::translate(modelPajaro3, glm::vec3(11.55f, 12.56f, -10.18f));
+            modelPajaro3 = glm::translate(modelPajaro3, pajaro3pos);
+            modelPajaro3 = glm::rotate(modelPajaro3, glm::radians(pajaro3Rot), glm::vec3(0.0f, 1.0f, 0.0f));
+            modelPajaro3 = glm::translate(modelPajaro3, glm::vec3(-11.55f, -12.56f, 10.18f));
+            // Cuerpo
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelPajaro3));
+            modelTemp = modelPajaro3;
+            TucanBody.Draw(lightingShader);
+
+            glm::mat4 model1 = modelTemp;
+            model1 = modelTemp;
+            model1 = glm::translate(model1, glm::vec3(11.64f, 13.74f, -10.81f));
+            model1 = glm::rotate(model1, glm::radians(pajaro3head), glm::vec3(0.0f, 0.0f, 1.0f));
+            model1 = glm::translate(model1, glm::vec3(-11.64f, -13.74f, 10.81f));
+            TucanHead.Draw(lightingShader);
+
+            modelTemp2 = model1;
+            model1 = modelTemp2;
+            model1 = glm::translate(model1, glm::vec3(11.34, 13.64f, -10.06f));
+            model1 = glm::rotate(model1, glm::radians(pico1), glm::vec3(-1.0f, 0.0f, 0.0f));
+            model1 = glm::translate(model1, glm::vec3(-11.34, -13.64f, 10.06f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model1));
+            TucanPico1.Draw(lightingShader);
+
+            model1 = modelTemp2;
+            model1 = glm::translate(model1, glm::vec3(11.34, 13.64f, -10.06f));
+            model1 = glm::rotate(model1, glm::radians(pico2), glm::vec3(1.0f, 0.0f, 0.0f));
+            model1 = glm::translate(model1, glm::vec3(-11.34, -13.64f, 10.06f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model1));
+            TucanPico2.Draw(lightingShader);
+
+            glm::mat4 model = modelTemp;
+            model = glm::translate(model, glm::vec3(11.42f, 12.48f, -12.66f));
+            model = glm::rotate(model, glm::radians(pajaro3tail), glm::vec3(1.0f, 0.0f, 0.0f));
+            model = glm::translate(model, glm::vec3(-11.42f, -12.48f, 12.66f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            TucanTail.Draw(lightingShader);
+
+        }
 
         // ----- REJAS -----
         {
             glm::mat4 model = modelRejas; // identidad
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
             Rejas.Draw(lightingShader);
+        }
+        // ----- cajas -----
+        {
+            glm::mat4 model(1.0f);
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            Cajas.Draw(lightingShader);
         }
 
         // ----- ARBUSTOS EN REJA -----
@@ -632,17 +796,24 @@ int main()
 
         // ----- AVIARIO VIDRIO (transparente) -----
         {
-            glm::mat4 model(1.0f);
+            glm::mat4 modelAv(1.0f);
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-            glUniform1i(transpLoc, 1);
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelAv));
+            glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 1);
             AviarioV.Draw(lightingShader);
-
             glDisable(GL_BLEND);
-            glUniform1i(transpLoc, 0);
+            glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
         }
+        // ----- ARBOL CENTRAL DEL AVIARIO -----
+        {
+            glm::mat4 model(1.0f);
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            ArbolAv.Draw(lightingShader);
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            HojasAv.Draw(lightingShader);
+        }
+
 
         // ----- FLORES -----
         {
@@ -672,7 +843,6 @@ int main()
             // ----- Cabeza -----
             {
                 glm::mat4 m = modelPingu;
-                // ajusta el pivote segn el cuello del pingino
                 glm::vec3 HEAD_PIVOT(0.0f, 1.0f, 0.0f);
                 m = glm::translate(m, HEAD_PIVOT);
                 m = glm::rotate(m, glm::radians(pinguHead_A), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -684,8 +854,6 @@ int main()
             // ----- Alas (malla con ambas alas) -----
             {
                 glm::mat4 m = modelPingu;
-
-                // Pivote aprox a la altura de los hombros del pingino
                 const glm::vec3 WINGS_PIVOT(0.0f, 0.9f, 0.0f);
 
                 m = glm::translate(m, WINGS_PIVOT);
@@ -697,7 +865,7 @@ int main()
             }
 
         }
-        // ----- PIRAA ------
+        // ----- PIRAÑA ------
         {
             //Head
             glm::mat4 modelPira(1.0f);
@@ -717,8 +885,8 @@ int main()
 
             // Posicin general de la foca (ajusta donde la quieras)
             base = glm::translate(base, glm::vec3(15.0f, 0.5f, 12.5f));
-            base = glm::rotate(base, glm::radians(-90.0f), glm::vec3(0, 1, 0)); // si necesitas orientarla
-            base = glm::scale(base, glm::vec3(2.5f));                     // si quieres ajustar tamao
+            base = glm::rotate(base, glm::radians(-90.0f), glm::vec3(0, 1, 0)); 
+            base = glm::scale(base, glm::vec3(2.5f));                    
 
             // ----- Cuerpo -----
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(base));
@@ -728,7 +896,7 @@ int main()
             {
                 glm::mat4 m = base;
 
-                // Pivote aprox donde se une el cuello con el cuerpo (ajusta a ojo)
+                // Pivote aprox donde se une el cuello con el cuerpo 
                 const glm::vec3 HEAD_PIVOT(0.0f, 0.35f, 0.7f);
 
                 m = glm::translate(m, HEAD_PIVOT);
@@ -742,9 +910,6 @@ int main()
             // ----- Manos / aletas delanteras (adelante/atrs) -----
             {
                 glm::mat4 m = base;
-
-                // Si sealHS tiene ambas aletas juntas, usa un pivote central.
-                // Si son separadas en el mismo modelo, igual funciona visualmente.
                 const glm::vec3 HANDS_PIVOT(0.0f, 0.15f, 0.3f);
 
                 m = glm::translate(m, HANDS_PIVOT);
@@ -754,8 +919,6 @@ int main()
                 glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m));
                 sealHS.Draw(lightingShader);
             }
-
-            // ----- Cola (opcional: pequea oscilacin) -----
             {
                 glm::mat4 m = base;
 
@@ -837,7 +1000,7 @@ int main()
             }
         }
 
-        // ------- TIBURN ----
+        // ------- TIBURON ----
         {
             //Body
             glm::mat4 modelTibu(1.0f);
@@ -945,6 +1108,20 @@ void ProcessInput(Window& window)
         ciervoTogglePressed = false;
     }
 
+    bool cNow = window.IsKeyPressed(GLFW_KEY_C);
+    if (cNow && !pajaro1TogglePressed)
+    {
+        pajaro1Anim = !pajaro1Anim;
+        pajaro2Anim = !pajaro2Anim;
+        pajaro3Anim = !pajaro3Anim;
+        pajaro1TogglePressed = true;
+    }
+    else if (!cNow)
+    {
+        pajaro1TogglePressed = false;
+    }
+
+
     bool nNow = window.IsKeyPressed(GLFW_KEY_N);
     if (nNow && !ciervobebeTogglePressed) {
         Ciervo2Anim = !Ciervo2Anim;
@@ -953,6 +1130,7 @@ void ProcessInput(Window& window)
     else if (!nNow) {
         ciervobebeTogglePressed = false;
     }
+
 }
 
 void Animation()
@@ -1089,6 +1267,83 @@ void Animation()
         if (head2 > 0.0f) head2 = std::max(0.0f, head2 - S2);
         if (head2 < 0.0f) head2 = std::min(0.0f, head2 + S2);
     }
+   // ===== Pájaro 1: vuelo oscilatorio + aleteo =====
+    if (pajaro1Anim) {
+        pajaroPhase += flyHz;
+
+        // Trayectoria: seno en X (lateral)
+        pajaro1pos.x = flyAmpX * sinf(pajaroPhase);
+
+        // ----- ALTURA 
+        pajaro1pos.y = flyHoverY + flyAmpY * sinf(pajaroPhase * 1.3f);
+
+        // Giro suave (yaw) acompasado al movimiento lateral
+        pajaro1Rot = flyYawAmp * sinf(pajaroPhase);
+
+        // Aleteo (alas en contrafase)
+        float wingPhase = pajaroPhase * (wingHz / std::max(0.0001f, flyHz)); // desacopla frecuencia del vuelo
+        ala1 = wingAmp * sinf(wingPhase);   // derecha
+        ala2 = -wingAmp * sinf(wingPhase);   // izquierda
+    }
+    else {
+        // Vuelve suave a neutro si se apaga la animación
+        auto go0 = [](float& v, float s) { if (v > 0) v = std::max(0.0f, v - s); else v = std::min(0.0f, v + s); };
+        go0(pajaro1pos.x, 0.05f);
+        go0(pajaro1pos.y, 0.05f);   // vuelve hacia 0 cuando apagado (si prefieres volver a flyHoverY, ajusta aquí)
+        go0(pajaro1Rot, 0.6f);
+        go0(ala1, 2.0f);
+        go0(ala2, 2.0f);
+    }
+
+    if (pajaro2Anim) {
+        if (!pajaro2step) {        // State 1
+            pajaro2head += 0.3f;
+            pajaro2Rot += 0.5f;
+            pajaro2tail += 1.0f;
+            if (pajaro2Rot > 20.0f) pajaro2step = true;
+        }
+        else {                  // State 2
+            pajaro2head -= 0.3f;
+            pajaro2Rot -= 0.5f;
+            pajaro2tail -= 1.0f;
+            if (pajaro2Rot < -20.0f) pajaro2step = false;
+        }
+    }
+
+    if (pajaro3Anim) {
+        if (!pajaro3step) {              // State 1: abre
+            pajaro3head += 0.3f;
+            pajaro3Rot += 0.5f;
+            pajaro3tail += 1.0f;
+
+            pico1 += picoVel;
+            pico2 += picoVel;
+
+            // límite superior (no abre más que picoMax)
+            if (pico1 > picoMax) pico1 = picoMax;
+            if (pico2 > picoMax) pico2 = picoMax;
+
+            if (pajaro3Rot > 20.0f) pajaro3step = true;
+        }
+        else {                         // State 2: cierra
+            pajaro3head -= 0.3f;
+            pajaro3Rot -= 0.5f;
+            pajaro3tail -= 1.0f;
+
+            pico1 -= picoVel;
+            pico2 -= picoVel;
+
+            // límite inferior (no se pasa de cerrado)
+            if (pico1 < 0.0f) pico1 = 0.0f;
+            if (pico2 < 0.0f) pico2 = 0.0f;
+
+            if (pajaro3Rot < -20.0f) pajaro3step = false;
+        }
+    }
+
+
+
+
 }
 
 
