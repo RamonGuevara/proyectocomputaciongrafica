@@ -116,7 +116,7 @@ int main()
     Model CiervoRamas((char*)"Ciervo_arbustoramas.obj");
     Model ArbustosReja((char*)"Arbustos_reja.obj");
     Model Pinos((char*)"PinosHojas.obj");
-    Model PinosRama((char*)"Models/PinosRama.obj");
+    Model PinosRama((char*)"PinosRama.obj");
     Model Aviario((char*)"Aviario.obj");
     Model AviarioV((char*)"VidrioAviario.obj");
     Model Flores((char*)"Flores.obj");
@@ -126,6 +126,9 @@ int main()
     Model BabyDeerBody((char*)"CiervoBebe.obj");
     Model BabyDeerNeck((char*)"CiervoBebeCuello.obj");
     Model BabyDeerHead((char*)"CiervoBebeCabeza.obj");
+
+    // Pinguino
+    Model PenguinBody((char*)"PenguinBody.obj");
 
     // Skybox
     GLfloat skyboxVertices[] = {
