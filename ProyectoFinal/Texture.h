@@ -7,28 +7,11 @@
 #include <vector>
 #include <string>
 
-#include <assimp/types.h>  // <- para aiString, usado en Texture
-
-// Esta estructura es la que usa Model/Mesh
-struct Texture
-{
-    GLuint id;        // ID de la textura en OpenGL
-    std::string type; // "texture_diffuse", "texture_specular", etc.
-    aiString path;    // Ruta original según Assimp (para evitar duplicados)
-};
-
-// Helper para cargar texturas sueltas y cubemaps
 class TextureLoading
 {
 public:
     static GLuint LoadTexture(const char* path)
     {
-        if (!path || !*path)
-        {
-            std::cout << "Error al cargar textura: ruta vacía" << std::endl;
-            return 0;
-        }
-
         GLuint textureID;
         glGenTextures(1, &textureID);
 
@@ -64,12 +47,14 @@ public:
         {
             std::cout << "Error al cargar textura: " << path << std::endl;
             stbi_image_free(data);
-            return 0;
         }
 
         return textureID;
     }
 
+    // Carga un cubemap para skybox.
+    // 'faces' debe contener 6 rutas:
+    // +X, -X, +Y, -Y, +Z, -Z
     static GLuint LoadCubemap(const std::vector<const GLchar*>& faces)
     {
         GLuint textureID;
