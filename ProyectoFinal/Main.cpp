@@ -116,7 +116,7 @@ int main()
     Model CiervoRamas((char*)"Ciervo_arbustoramas.obj");
     Model ArbustosReja((char*)"Arbustos_reja.obj");
     Model Pinos((char*)"PinosHojas.obj");
-    Model PinosRama((char*)"PinosRama.obj");
+    Model PinosRama((char*)"Models/PinosRama.obj");
     Model Aviario((char*)"Aviario.obj");
     Model AviarioV((char*)"VidrioAviario.obj");
     Model Flores((char*)"Flores.obj");
@@ -126,12 +126,6 @@ int main()
     Model BabyDeerBody((char*)"CiervoBebe.obj");
     Model BabyDeerNeck((char*)"CiervoBebeCuello.obj");
     Model BabyDeerHead((char*)"CiervoBebeCabeza.obj");
-
-    // Pinguino
-    Model PenguinBody((char*)"PenguinBody.obj");
-    Model PenguinHead((char*)"PenguinHead.obj");
-    Model PenguinWings((char*)"PenguinWings.obj");
-
 
     // Skybox
     GLfloat skyboxVertices[] = {
@@ -590,32 +584,6 @@ int main()
             BabyDeerNeck.Draw(lightingShader);
             BabyDeerHead.Draw(lightingShader);
         }
-
-        // ----- PINGÜINO -----
-        {
-            glm::mat4 modelPenguin(1.0f);
-
-            // Posición y escala global del pingüino
-            modelPenguin = glm::translate(modelPenguin, glm::vec3(10.0f, 0.0f, -5.0f)); // mueve según tu escena
-            modelPenguin = glm::scale(modelPenguin, glm::vec3(0.8f)); // ajusta tamaño general
-
-            // Dibuja cuerpo base
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelPenguin));
-            PenguinBody.Draw(lightingShader);
-
-            // Cabeza
-            glm::mat4 model = modelPenguin;
-            model = glm::translate(model, glm::vec3(0.0f, 2.2f, 0.0f)); // altura de la cabeza
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-            PenguinHead.Draw(lightingShader);
-
-            // Alas
-            model = modelPenguin;
-            model = glm::translate(model, glm::vec3(0.0f, 1.0f, 0.0f));
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-            PenguinWings.Draw(lightingShader);
-        }
-
 
         // ----- SKYBOX -----
         glDepthFunc(GL_LEQUAL);
