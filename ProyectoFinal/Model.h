@@ -22,7 +22,8 @@
 
 using namespace std;
 
-GLint TextureFromFile(const char* path, string directory);
+GLint TextureFromFile(const char* path, const std::string& directory);
+GLuint LoadDefaultTexture();
 
 class Model
 {
@@ -33,27 +34,23 @@ public:
 
         // Normalizar separadores
         for (char& c : realPath)
-        {
             if (c == '\\') c = '/';
-        }
 
         // Si no empieza con "Models/", lo prefixeamos
         const std::string modelsPrefix = "Models/";
         if (realPath.rfind(modelsPrefix, 0) != 0)
-        {
             realPath = modelsPrefix + realPath;
-        }
 
-        this->loadModel(realPath);
+        if (!this->loadModel(realPath))
+        {
+            std::cout << "Error al cargar el modelo: " << realPath << std::endl;
+        }
     }
 
-    // Dibuja todas las meshes del modelo
     void Draw(Shader shader)
     {
         for (GLuint i = 0; i < this->meshes.size(); i++)
-        {
             this->meshes[i].Draw(shader);
-        }
     }
 
 private:
@@ -61,7 +58,7 @@ private:
     string directory;                // Carpeta donde está el .obj
     vector<Texture> textures_loaded; // Cache de texturas para evitar duplicados
 
-    void loadModel(const string& path)
+    bool loadModel(const string& path)
     {
         Assimp::Importer importer;
 
@@ -73,8 +70,11 @@ private:
 
         if (!scene || scene->mFlags == AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
         {
-            std::cout << "ERROR::ASSIMP:: " << importer.GetErrorString() << std::endl;
-            return;
+            std::cout
+                << "Error al cargar el modelo: " << path
+                << " - " << importer.GetErrorString()
+                << std::endl;
+            return false;
         }
 
         // Carpeta base del .obj (ej: "Models" o "Models/Puerta")
@@ -85,6 +85,7 @@ private:
             this->directory = ".";
 
         this->processNode(scene->mRootNode, scene);
+        return true;
     }
 
     void processNode(aiNode* node, const aiScene* scene)
@@ -93,7 +94,17 @@ private:
         for (GLuint i = 0; i < node->mNumMeshes; i++)
         {
             aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-            this->meshes.push_back(this->processMesh(mesh, scene));
+            Mesh m = this->processMesh(mesh, scene);
+
+            // Si por alguna razón viene vacía, la ignoramos
+            if (!m.vertices.empty() && !m.indices.empty())
+            {
+                this->meshes.push_back(m);
+            }
+            else
+            {
+                std::cout << "Advertencia: mesh vacía/ inválida omitida." << std::endl;
+            }
         }
 
         // Recorrer hijos
@@ -178,6 +189,16 @@ private:
             textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
         }
 
+        // Si no hubo texturas en el material, usar la default
+        if (textures.empty())
+        {
+            Texture t;
+            t.id = LoadDefaultTexture();
+            t.type = "texture_diffuse";
+            t.path = aiString("plain.png");
+            textures.push_back(t);
+        }
+
         return Mesh(vertices, indices, textures);
     }
 
@@ -209,6 +230,15 @@ private:
                 texture.type = typeName;
                 texture.path = str;
 
+                if (texture.id == 0)
+                {
+                    std::cout
+                        << "Error al cargar la textura: " << str.C_Str()
+                        << ", usando Textures/plain.png" << std::endl;
+                    texture.id = LoadDefaultTexture();
+                    texture.path = aiString("plain.png");
+                }
+
                 textures.push_back(texture);
                 textures_loaded.push_back(texture);
             }
@@ -218,22 +248,21 @@ private:
     }
 };
 
-GLint TextureFromFile(const char* path, string /*directory*/)
+// ---------------- IMPLEMENTACIÓN TEXTURAS ----------------
+
+GLint TextureFromFile(const char* path, const std::string& directory)
 {
     if (!path || !*path)
     {
-        std::cout << "ERROR::TEXTURE_LOADING::EMPTY_PATH" << std::endl;
-        return 0;
+        std::cout << "Error al cargar la textura: [ruta vacía], usando Textures/plain.png" << std::endl;
+        return LoadDefaultTexture();
     }
 
     std::string p(path);
 
     // Normalizar '\' a '/'
     for (char& c : p)
-    {
-        if (c == '\\')
-            c = '/';
-    }
+        if (c == '\\') c = '/';
 
     // Quitar espacios alrededor
     while (!p.empty() && (p.front() == ' ' || p.front() == '\t'))
@@ -243,36 +272,49 @@ GLint TextureFromFile(const char* path, string /*directory*/)
 
     if (p.empty())
     {
-        std::cout << "ERROR::TEXTURE_LOADING::EMPTY_PATH_AFTER_TRIM" << std::endl;
-        return 0;
+        std::cout << "Error al cargar la textura: [ruta vacía tras limpiar], usando Textures/plain.png" << std::endl;
+        return LoadDefaultTexture();
     }
 
     std::string fullPath;
 
+    // Si ya empieza con Textures/, úsalo directo
     const std::string texPrefix = "Textures/";
     if (p.rfind(texPrefix, 0) == 0)
     {
         fullPath = p;
     }
+    else if (!directory.empty())
+    {
+        // Primero probamos relativo al modelo
+        fullPath = directory + "/" + p;
+    }
     else
     {
-        // Si no, asumimos que es relativo a la carpeta Textures/
-        // y concatenamos:
-        //   "Textures/" + p
+        // Si no hay directorio, probamos en Textures/
         fullPath = texPrefix + p;
     }
-
-    GLuint textureID;
-    glGenTextures(1, &textureID);
 
     int width, height, channels;
     unsigned char* image = SOIL_load_image(fullPath.c_str(), &width, &height, &channels, SOIL_LOAD_AUTO);
 
+    // Si falla, probamos directamente en Textures/<archivo> como respaldo
     if (!image)
     {
-        std::cout << "ERROR::TEXTURE_LOADING::FAILED " << fullPath
-            << " (from '" << p << "')" << std::endl;
-        return 0;
+        std::string alt = texPrefix + p;
+        if (alt != fullPath)
+        {
+            image = SOIL_load_image(alt.c_str(), &width, &height, &channels, SOIL_LOAD_AUTO);
+            if (image)
+                fullPath = alt;
+        }
+    }
+
+    if (!image)
+    {
+        std::cout << "Error al cargar la textura: " << p
+            << ", usando Textures/plain.png" << std::endl;
+        return LoadDefaultTexture();
     }
 
     GLenum format = GL_RGB;
@@ -280,7 +322,10 @@ GLint TextureFromFile(const char* path, string /*directory*/)
     else if (channels == 3)  format = GL_RGB;
     else if (channels == 4)  format = GL_RGBA;
 
+    GLuint textureID;
+    glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
+
     glTexImage2D(GL_TEXTURE_2D,
         0,
         format,
@@ -301,4 +346,74 @@ GLint TextureFromFile(const char* path, string /*directory*/)
     SOIL_free_image_data(image);
 
     return textureID;
+}
+
+GLuint LoadDefaultTexture()
+{
+    static GLuint defaultTex = 0;
+    if (defaultTex != 0)
+        return defaultTex;
+
+    const std::string fallback = "Textures/plain.png";
+
+    int width, height, channels;
+    unsigned char* image = SOIL_load_image(fallback.c_str(), &width, &height, &channels, SOIL_LOAD_AUTO);
+
+    if (!image)
+    {
+        std::cout
+            << "Error al cargar la textura: " << fallback
+            << ", creando textura blanca por defecto." << std::endl;
+
+        unsigned char white[4] = { 255, 255, 255, 255 };
+
+        glGenTextures(1, &defaultTex);
+        glBindTexture(GL_TEXTURE_2D, defaultTex);
+        glTexImage2D(GL_TEXTURE_2D,
+            0,
+            GL_RGBA,
+            1, 1,
+            0,
+            GL_RGBA,
+            GL_UNSIGNED_BYTE,
+            white);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+        return defaultTex;
+    }
+
+    GLenum format = GL_RGB;
+    if (channels == 1)       format = GL_RED;
+    else if (channels == 3)  format = GL_RGB;
+    else if (channels == 4)  format = GL_RGBA;
+
+    glGenTextures(1, &defaultTex);
+    glBindTexture(GL_TEXTURE_2D, defaultTex);
+
+    glTexImage2D(GL_TEXTURE_2D,
+        0,
+        format,
+        width,
+        height,
+        0,
+        format,
+        GL_UNSIGNED_BYTE,
+        image);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    SOIL_free_image_data(image);
+
+    std::cout << "Usando textura por defecto: " << fallback << std::endl;
+    return defaultTex;
 }

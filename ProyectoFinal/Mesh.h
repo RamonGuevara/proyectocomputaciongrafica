@@ -52,6 +52,10 @@ public:
     // Renderiza el mesh con el shader dado
     void Draw(Shader shader)
     {
+
+        if (indices.empty() || VAO == 0)
+            return;
+
         GLuint diffuseNr = 1;
         GLuint specularNr = 1;
 
