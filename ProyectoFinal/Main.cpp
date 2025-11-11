@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <cmath>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -7,6 +8,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/constants.hpp>
 
 #include "Shader.h"
 #include "Camera.h"
@@ -47,6 +49,18 @@ bool Ciervostep = false;
 
 bool puertaTogglePressed = false;
 bool ciervoTogglePressed = false;
+
+// Animación oso polar
+float pBearWalkTime = 0.0f;
+float pBearFR_A = 0.0f;
+float pBearFL_A = 0.0f;
+float pBearBR_A = 0.0f;
+float pBearBL_A = 0.0f;
+
+// Animación pingüino
+float pinguTime = 0.0f;
+float pinguHead_A = 0.0f;
+float pinguWings_A = 0.0f;
 
 glm::mat4 modelTemp(1.0f);
 
@@ -143,17 +157,21 @@ int main()
     Model sealT((char*)"seal_tail.obj");
 
     // Oso polar
-    Model pBearH((char*)"Polar_Bear_body.obj");
-    Model pBearB((char*)"Polar_Bear_head.obj");
+    Model pBearBody((char*)"Polar_Bear_body.obj");
+    Model pBearHead((char*)"Polar_Bear_head.obj");
     Model pBearFR((char*)"Polar_Bear_FR_Leg.obj");
     Model pBearFL((char*)"Polar_Bear_FL_Leg.obj");
     Model pBearBR((char*)"Polar_Bear_BR_Leg.obj");
     Model pBearBL((char*)"Polar_Bear_BL_Leg.obj");
 
+
     // Tiburón
     Model sharkB((char*)"Tiburon1_torso.obj");
     Model sharkH((char*)"Tiburon1.obj");
     Model sharkT((char*)"Tiburon1_cola.obj");
+
+    // Iglu
+    Model Iglu((char*)"Iglu.obj");
 
     // Skybox
     GLfloat skyboxVertices[] = {
@@ -616,17 +634,49 @@ int main()
         // ----- PINGÜINO -----
         {
             glm::mat4 modelPingu(1.0f);
-            modelPingu = glm::translate(modelPingu, glm::vec3(-1.5f, 0.0f, 1.5));
+            modelPingu = glm::translate(modelPingu, glm::vec3(20.0f, 0.0f, 10.0f));
+            modelPingu = glm::scale(modelPingu, glm::vec3(2.5f));
+            modelPingu = glm::rotate(modelPingu, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+            // ----- Cuerpo -----
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelPingu));
             pinguB.Draw(lightingShader);
-            //Head
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelPingu));
-            pinguH.Draw(lightingShader);
-            //Wings
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelPingu));
-            pinguW.Draw(lightingShader);
-        }
 
+            // ----- Cabeza -----
+            {
+                glm::mat4 m = modelPingu;
+                // ajusta el pivote según el cuello del pingüino
+                glm::vec3 HEAD_PIVOT(0.0f, 1.0f, 0.0f);
+                m = glm::translate(m, HEAD_PIVOT);
+                m = glm::rotate(m, glm::radians(pinguHead_A), glm::vec3(1.0f, 0.0f, 0.0f));
+                m = glm::translate(m, -HEAD_PIVOT);
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m));
+                pinguH.Draw(lightingShader);
+            }
+
+            // ----- Alas -----
+            {
+                // pivotes aproximados para las alas
+                const glm::vec3 WING_LEFT_PIVOT(0.0f, 1.0f, 0.0f);
+                const glm::vec3 WING_RIGHT_PIVOT(0.0f, 1.0f, 0.0f);
+
+                // Ala izquierda
+                glm::mat4 left = modelPingu;
+                left = glm::translate(left, WING_LEFT_PIVOT);
+                left = glm::rotate(left, glm::radians(pinguWings_A), glm::vec3(0.0f, 0.0f, 1.0f));
+                left = glm::translate(left, -WING_LEFT_PIVOT);
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(left));
+                pinguW.Draw(lightingShader);
+
+                // Ala derecha (inversa)
+                glm::mat4 right = modelPingu;
+                right = glm::translate(right, WING_RIGHT_PIVOT);
+                right = glm::rotate(right, glm::radians(-pinguWings_A), glm::vec3(0.0f, 0.0f, 1.0f));
+                right = glm::translate(right, -WING_RIGHT_PIVOT);
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(right));
+                pinguW.Draw(lightingShader);
+            }
+        }
         // ----- PIRAÑA ------
         {
             //Head
@@ -661,26 +711,66 @@ int main()
 
         // ------ OSO POLAR -------
         {
-            //Body
-            glm::mat4 modelOSO(1.0f);
-            modelOSO = glm::translate(modelOSO, glm::vec3(2.0f, 0.0f, 0.0f));
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelOSO));
-            pBearB.Draw(lightingShader);
-            //Head
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelOSO));
-            pBearH.Draw(lightingShader);
-            //Front Right Leg
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelOSO));
-            pBearFR.Draw(lightingShader);
-            //Front Left Leg
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelOSO));
-            pBearFL.Draw(lightingShader);
-            //Back Right Leg
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelOSO));
-            pBearBR.Draw(lightingShader);
-            //Back Left Leg
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelOSO));
-            pBearBL.Draw(lightingShader);
+            glm::mat4 base(1.0f);
+
+            // Posición / escala / rotación general del oso
+            base = glm::translate(base, glm::vec3(20.0f, 0.0f, 15.0f));
+            base = glm::scale(base, glm::vec3(2.5f));
+            base = glm::rotate(base, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+            // ----- Cuerpo -----
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(base));
+            pBearBody.Draw(lightingShader);
+
+            // ----- Cabeza -----
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(base));
+            pBearHead.Draw(lightingShader);
+
+            // ----- Pivotes (en coordenadas LOCALES del oso, ajústalos a ojo) -----
+            const glm::vec3 FR_PIVOT(0.3f, 0.3f, 0.4f); // Front Right
+            const glm::vec3 FL_PIVOT(-0.3f, 0.3f, 0.4f); // Front Left
+            const glm::vec3 BR_PIVOT(0.3f, 1.0f, -0.5f); // Back Right
+            const glm::vec3 BL_PIVOT(-0.3f, 1.0f, -0.5f); // Back Left
+
+            // Front Right Leg
+            {
+                glm::mat4 m = base;
+                m = glm::translate(m, FR_PIVOT);
+                m = glm::rotate(m, glm::radians(pBearFR_A), glm::vec3(1.0f, 0.0f, 0.0f));
+                m = glm::translate(m, -FR_PIVOT);
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m));
+                pBearFR.Draw(lightingShader);
+            }
+
+            // Front Left Leg
+            {
+                glm::mat4 m = base;
+                m = glm::translate(m, FL_PIVOT);
+                m = glm::rotate(m, glm::radians(pBearFL_A), glm::vec3(1.0f, 0.0f, 0.0f));
+                m = glm::translate(m, -FL_PIVOT);
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m));
+                pBearFL.Draw(lightingShader);
+            }
+
+            // Back Right Leg
+            {
+                glm::mat4 m = base;
+                m = glm::translate(m, BR_PIVOT);
+                m = glm::rotate(m, glm::radians(pBearBR_A), glm::vec3(1.0f, 0.0f, 0.0f));
+                m = glm::translate(m, -BR_PIVOT);
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m));
+                pBearBR.Draw(lightingShader);
+            }
+
+            // Back Left Leg
+            {
+                glm::mat4 m = base;
+                m = glm::translate(m, BL_PIVOT);
+                m = glm::rotate(m, glm::radians(pBearBL_A), glm::vec3(1.0f, 0.0f, 0.0f));
+                m = glm::translate(m, -BL_PIVOT);
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m));
+                pBearBL.Draw(lightingShader);
+            }
         }
 
         // ------- TIBURÓN ----
@@ -698,6 +788,22 @@ int main()
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelTibu));
             sharkT.Draw(lightingShader);
         }
+
+        // ----- IGLU -----
+        {
+            glm::mat4 modelIglu(1.0f);
+
+            // Posición del iglú (ajusta si quieres moverlo)
+            modelIglu = glm::translate(modelIglu, glm::vec3(5.0f, 0.0f, 7.0f));
+
+            // Escala del iglú (sube/baja este valor según el tamaño del modelo)
+            modelIglu = glm::scale(modelIglu, glm::vec3(0.8f));
+
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelIglu));
+            glUniform1i(transpLoc, 0);      // Iglú opaco
+            Iglu.Draw(lightingShader);
+        }
+
 
         // ----- SKYBOX -----
         glDepthFunc(GL_LEQUAL);
@@ -813,6 +919,23 @@ void Animation()
         if (head > 0.0f) head -= 0.3f;
         if (head < 0.0f) head += 0.3f;
     }
+   // ----- OSO POLAR: caminar en su lugar -----
+    pBearWalkTime += deltaTime * 4.0f;
+
+    float swingA = std::sin(pBearWalkTime) * 20.0f;
+    float swingB = std::sin(pBearWalkTime + glm::pi<float>()) * 20.0f;
+
+    pBearFR_A = swingA;
+    pBearBL_A = swingA;
+    pBearFL_A = swingB;
+    pBearBR_A = swingB;
+
+    // ----- PINGÜINO: movimiento de cabeza y alas -----
+    pinguTime += deltaTime * 3.0f;  // velocidad de animación
+    // alas se mueven en seno
+    pinguWings_A = std::sin(pinguTime) * 35.0f; // +/-25 grados
+    // cabeza en oposición de fase (cuando alas van atrás, cabeza adelante)
+    pinguHead_A = std::sin(pinguTime + glm::pi<float>()) * 15.0f; // +/-15 grados
 }
 
 void CrearObjeto(GLuint& VAO, GLuint& VBO, GLuint& EBO,
