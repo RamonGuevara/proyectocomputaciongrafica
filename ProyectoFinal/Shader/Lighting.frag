@@ -12,7 +12,6 @@ struct Material
 struct DirLight
 {
     vec3 direction;
-    
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
@@ -21,11 +20,9 @@ struct DirLight
 struct PointLight
 {
     vec3 position;
-    
     float constant;
     float linear;
     float quadratic;
-    
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
@@ -52,13 +49,15 @@ in vec3 Normal;
 in vec2 TexCoords;
 
 out vec4 color;
-
 uniform vec3 viewPos;
 uniform DirLight dirLight;
 uniform PointLight pointLights[NUMBER_OF_POINT_LIGHTS];
 uniform SpotLight spotLight;
 uniform Material material;
 uniform int transparency;
+
+// === agregado: control fino de opacidad ===
+uniform float alpha;   // 0.0 totalmente transparente, 1.0 opaco
 
 // Function prototypes
 vec3 CalcDirLight( DirLight light, vec3 normal, vec3 viewDir );
@@ -84,7 +83,11 @@ void main( )
     result += CalcSpotLight( spotLight, norm, FragPos, viewDir );
  	
     color = vec4( result,texture(material.diffuse, TexCoords).rgb );
-	  if(color.a < 0.1 && transparency==1)
+    float texA = texture(material.diffuse, TexCoords).a;
+    color.a = texA * alpha;
+    // ======================================================================
+
+	if(color.a < 0.1 && transparency==1)
         discard;
 
 }
@@ -169,3 +172,5 @@ vec3 CalcSpotLight( SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir )
     
     return ( ambient + diffuse + specular );
 }
+
+
