@@ -253,9 +253,7 @@ int main()
     Shader lightingShader("Shader/Lighting.vert", "Shader/Lighting.frag");
     Shader skyboxShader("Shader/SkyBox.vert", "Shader/SkyBox.frag");
     lightingShader.Use();
-    glUniform1i(glGetUniformLocation(lightingShader.Program, "texture_diffuse1"), 0);
-    glUniform1i(glGetUniformLocation(lightingShader.Program, "texture_specular1"), 1);
-
+  
     skyboxShader.Use();
     glUniform1i(glGetUniformLocation(skyboxShader.Program, "skybox"), 1);
 
@@ -461,7 +459,7 @@ int main()
     GLuint bardaTextura = TextureLoading::LoadTexture("Textures/brick.png");
     GLuint cubeTexture = TextureLoading::LoadTexture("Textures/plain.png");
     GLuint lampTexture = TextureLoading::LoadTexture("Textures/lamparas.jpg");
-
+    GLuint texDado8 = TextureLoading::LoadTexture("Textures/dado8_numeros.png");
 
     // ===== CUBO L MPARA =====
     GLfloat cubeVertices[] = {
@@ -661,6 +659,18 @@ int main()
 
     GLint shininessLoc = glGetUniformLocation(lightingShader.Program, "material.shininess");
     GLint transpLoc = glGetUniformLocation(lightingShader.Program, "transparency");
+    GLint useFlatColorLoc = glGetUniformLocation(lightingShader.Program, "useFlatColor");
+    GLint flatColorLoc = glGetUniformLocation(lightingShader.Program, "flatColor");
+    GLint alphaLoc = glGetUniformLocation(lightingShader.Program, "alpha");
+
+    // Valores iniciales
+    glUniform1i(useFlatColorLoc, GL_FALSE);             // por defecto: usamos textura
+    glUniform3f(flatColorLoc, 1.0f, 1.0f, 1.0f);        // color plano blanco (por si se usa)
+    glUniform1f(alphaLoc, 1.0f);                        // todo opaco al iniciar
+
+    glUniform1i(glGetUniformLocation(lightingShader.Program, "material.diffuse"), 0);
+    glUniform1i(glGetUniformLocation(lightingShader.Program, "material.specular"), 1);
+
 
     skyboxShader.Use();
     GLint skyViewLoc = glGetUniformLocation(skyboxShader.Program, "view");
@@ -1331,11 +1341,16 @@ int main()
 
         // =========== CASA ===========
         {
-            glm::mat4 modelCasa(1.0f);
-            // Colocamos la casa en un rincón, por ejemplo cerca del hábitat del ciervo
-            modelCasa = glm::translate(modelCasa, glm::vec3(-3.5f, 2.0f, 1.0f));
-            modelCasa = glm::scale(modelCasa, glm::vec3(0.5f)); // tamaño
+            // Usamos textura blanca, por ejemplo
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, cubeTexture);
 
+            // Activar modo color plano para la casa
+            glUniform1i(useFlatColorLoc, GL_TRUE);
+
+            glm::mat4 modelCasa(1.0f);
+            modelCasa = glm::translate(modelCasa, glm::vec3(-3.5f, 2.0f, 1.0f));
+            modelCasa = glm::scale(modelCasa, glm::vec3(0.5f));
             objetosEscena.DrawCasa(modelCasa, modelLoc);
         }
 
@@ -1352,9 +1367,11 @@ int main()
         // =========== OCTAEDRO ===========
         {
             glm::mat4 modelOct(1.0f);
-            // Por ejemplo cerca de la pecera
             modelOct = glm::translate(modelOct, glm::vec3(3.0f, 1.8f, 3.0f));
             modelOct = glm::scale(modelOct, glm::vec3(0.25f));
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texDado8);
 
             objetosEscena.DrawOctaedro(modelOct, modelLoc);
         }
