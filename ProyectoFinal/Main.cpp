@@ -17,6 +17,7 @@
 #include "Mesh.h"
 #include "Texture.h"
 #include "Window.h"
+#include "ObjetosOpenGL.h"
 
 
 void CrearObjeto(GLuint& VAO, GLuint& VBO, GLuint& EBO,
@@ -204,6 +205,9 @@ float piranhaRot = 0.0f;
 // --- Para rotaci n suave sin trigonometr a ---
 float piraRotAngle = 0.0f;      // acumulador de rotaci n
 float piraDirRot = 1.0f;      // +1 gira derecha, -1 gira izquierda
+float swimSpeed = 0.5f;
+float swimLimit = 0.3f;
+
 
 glm::mat4 modelTemp(1.0f);
 glm::mat4 modelTemp2(1.0f);
@@ -243,6 +247,8 @@ int main()
     }
 
     glEnable(GL_DEPTH_TEST);
+
+    ObjetosOpenGL objetosEscena;
 
     Shader lightingShader("Shader/Lighting.vert", "Shader/Lighting.frag");
     Shader skyboxShader("Shader/SkyBox.vert", "Shader/SkyBox.frag");
@@ -329,6 +335,7 @@ int main()
     Model Coral2((char*)"coral2.obj");
     Model Coral3((char*)"coral3.obj");
     Model Banquitas((char*)"banquitas.obj");
+    objetosEscena.Init();
 
     //Pajaros
     Model Pajaro1Body((char*)"pajaro1body.obj");
@@ -1309,6 +1316,49 @@ int main()
             Banquitas.Draw(lightingShader);
         }
 
+
+
+        // ---------------------------------------------------------------------
+        //  OBJETOSOpenGL: Casa, Pyraminx y Octaedro
+        // ---------------------------------------------------------------------
+
+        // Aseguramos que usamos el shader de iluminación
+        lightingShader.Use();
+
+        // Usamos la misma textura que el piso para la casa (puedes cambiarla)
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, cubeTexture);   // o bardaTextura, etc.
+
+        // =========== CASA ===========
+        {
+            glm::mat4 modelCasa(1.0f);
+            // Colocamos la casa en un rincón, por ejemplo cerca del hábitat del ciervo
+            modelCasa = glm::translate(modelCasa, glm::vec3(-3.5f, 2.0f, 1.0f));
+            modelCasa = glm::scale(modelCasa, glm::vec3(0.5f)); // tamaño
+
+            objetosEscena.DrawCasa(modelCasa, modelLoc);
+        }
+
+        // =========== PYRAMINX ===========
+        {
+            glm::mat4 modelPyr(1.0f);
+            // Ponerlo en algún área central
+            modelPyr = glm::translate(modelPyr, glm::vec3(3.0f, 1.8f, 0.0f));
+            modelPyr = glm::scale(modelPyr, glm::vec3(0.25f));
+
+            objetosEscena.DrawPyraminx(modelPyr, modelLoc);
+        }
+
+        // =========== OCTAEDRO ===========
+        {
+            glm::mat4 modelOct(1.0f);
+            // Por ejemplo cerca de la pecera
+            modelOct = glm::translate(modelOct, glm::vec3(3.0f, 1.8f, 3.0f));
+            modelOct = glm::scale(modelOct, glm::vec3(0.25f));
+
+            objetosEscena.DrawOctaedro(modelOct, modelLoc);
+        }
+
         // Cubo 1 
         {
             // textura difusa para el cubo
@@ -1906,10 +1956,6 @@ void Animation()
 
         // ---------- PIRA A ----------
         piraTime += dt;
-
-        float swimSpeed = 0.5f;
-        float swimLimit = 0.3f;
-
         piranhaPos.z += swimSpeed * dt;
 
         if (piranhaPos.z > swimLimit) {
