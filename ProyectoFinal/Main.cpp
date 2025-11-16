@@ -231,6 +231,8 @@ const glm::vec3 GATE_LOCAL_REF = 0.5f * (PUERTA_DER_PIVOT + PUERTA_IZQ_PIVOT);
 const glm::vec3 GATE_POS(0.0f, 0.0f, 30.0f);
 const glm::vec3 GATE_SCALE(1.5f, 1.5f, 1.5f);
 
+float rotEscenaY = 0.0f;
+
 struct WallSegment {
     glm::vec3 pos;
     float rotY;
@@ -1326,8 +1328,6 @@ int main()
             Banquitas.Draw(lightingShader);
         }
 
-
-
         // ---------------------------------------------------------------------
         //  OBJETOSOpenGL: Casa, Pyraminx y Octaedro
         // ---------------------------------------------------------------------
@@ -1341,24 +1341,26 @@ int main()
 
         // =========== CASA ===========
         {
-            // Usamos textura blanca, por ejemplo
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, cubeTexture);
 
-            // Activar modo color plano para la casa
             glUniform1i(useFlatColorLoc, GL_TRUE);
 
             glm::mat4 modelCasa(1.0f);
             modelCasa = glm::translate(modelCasa, glm::vec3(-3.5f, 2.0f, 1.0f));
+            // ---- rotación en Y (sobre su propio eje) ----
+            modelCasa = glm::rotate(modelCasa, glm::radians(rotEscenaY), glm::vec3(0.0f, 1.0f, 0.0f));
+            // ---------------------------------------------
             modelCasa = glm::scale(modelCasa, glm::vec3(0.5f));
+
             objetosEscena.DrawCasa(modelCasa, modelLoc);
         }
 
         // =========== PYRAMINX ===========
         {
             glm::mat4 modelPyr(1.0f);
-            // Ponerlo en algún área central
             modelPyr = glm::translate(modelPyr, glm::vec3(3.0f, 1.8f, 0.0f));
+            modelPyr = glm::rotate(modelPyr, glm::radians(rotEscenaY), glm::vec3(0.0f, 1.0f, 0.0f));
             modelPyr = glm::scale(modelPyr, glm::vec3(0.25f));
 
             objetosEscena.DrawPyraminx(modelPyr, modelLoc);
@@ -1368,6 +1370,7 @@ int main()
         {
             glm::mat4 modelOct(1.0f);
             modelOct = glm::translate(modelOct, glm::vec3(3.0f, 1.8f, 3.0f));
+            modelOct = glm::rotate(modelOct, glm::radians(rotEscenaY), glm::vec3(0.0f, 1.0f, 0.0f));
             modelOct = glm::scale(modelOct, glm::vec3(0.25f));
 
             glActiveTexture(GL_TEXTURE0);
@@ -1375,6 +1378,7 @@ int main()
 
             objetosEscena.DrawOctaedro(modelOct, modelLoc);
         }
+
 
         // Cubo 1 
         {
@@ -2003,7 +2007,9 @@ void Animation()
 
         piranhaRot = piraRotAngle;
     }
-
+    rotEscenaY += 20.0f * deltaTime;   // 20 grados por segundo
+    if (rotEscenaY > 360.0f)
+        rotEscenaY -= 360.0f;
 }
 
 

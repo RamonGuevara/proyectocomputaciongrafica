@@ -449,13 +449,13 @@ private:
 
         // Normales de cada cara (pre-normalizadas)
         glm::vec3 N0(-0.57735f, -0.57735f, -0.57735f); // T,R,F
-        glm::vec3 N1(0.57735f, -0.57735f, -0.57735f); // T,F,L
-        glm::vec3 N2(0.57735f, -0.57735f, 0.57735f); // T,L,K
-        glm::vec3 N3(-0.57735f, -0.57735f, 0.57735f); // T,K,R
-        glm::vec3 N4(-0.57735f, 0.57735f, -0.57735f); // B,F,R
-        glm::vec3 N5(0.57735f, 0.57735f, -0.57735f); // B,L,F
-        glm::vec3 N6(0.57735f, 0.57735f, 0.57735f); // B,K,L
-        glm::vec3 N7(-0.57735f, 0.57735f, 0.57735f); // B,R,K
+        glm::vec3 N1(0.57735f, -0.57735f, -0.57735f);  // T,F,L
+        glm::vec3 N2(0.57735f, -0.57735f, 0.57735f);  // T,L,K
+        glm::vec3 N3(-0.57735f, -0.57735f, 0.57735f);  // T,K,R
+        glm::vec3 N4(-0.57735f, 0.57735f, -0.57735f);  // B,F,R
+        glm::vec3 N5(0.57735f, 0.57735f, -0.57735f);  // B,L,F
+        glm::vec3 N6(0.57735f, 0.57735f, 0.57735f);  // B,K,L
+        glm::vec3 N7(-0.57735f, 0.57735f, 0.57735f);  // B,R,K
 
         std::vector<float> v;
         v.reserve(8 * 3 * 8); // 8 caras * 3 vértices * (pos+uv+normal)
@@ -479,14 +479,12 @@ private:
                 float v0 = row * dv;
                 float v1 = (row + 1) * dv;
 
-                // ---- Escala para que el número se vea más pequeño ----
-                float scale = 1.0f;   // 1.0 = tamaño completo; <1.0 = más pequeño
+                // ---- Escala (ahora mismo sin cambio de tamaño) ----
+                float scale = 1.0f;
 
-                // centro del tile
                 float uCenter = 0.5f * (u0 + u1);
                 float vCenter = 0.5f * (v0 + v1);
 
-                // nuevo rectángulo reducido y centrado
                 float halfU = (u1 - u0) * scale * 0.5f;
                 float halfV = (v1 - v0) * scale * 0.5f;
 
@@ -495,14 +493,23 @@ private:
                 float v0s = vCenter - halfV;
                 float v1s = vCenter + halfV;
 
-                // coordenada U central (para el vértice superior del triángulo)
+                // Coordenada U central (vértice superior del triángulo)
                 float uMid = 0.5f * (u0s + u1s);
 
+                // UV iniciales (con la posición que ya te gusta)
                 float UV[3][2] = {
-                     { uMid, v1s },  // vértice superior
-                     { u1s,  v0s },  // base izquierda (antes u0s)
-                     { u0s,  v0s }   // base derecha (antes u1s)
+                    { uMid, v1s },  // vértice superior
+                    { u0s,  v0s },  // base izquierda
+                    { u1s,  v0s }   // base derecha
                 };
+
+                // === AQUÍ QUITAMOS EL ESPEJO EN U ===
+                float uSum = u0s + u1s;           // 2 * uCenter
+                for (int k = 0; k < 3; ++k)
+                {
+                    UV[k][0] = uSum - UV[k][0];   // u' = u0s + u1s - u
+                }
+                // ================================
 
                 glm::vec3 P[3] = { p0, p1, p2 };
 
