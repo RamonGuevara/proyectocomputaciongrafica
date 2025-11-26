@@ -1,6 +1,6 @@
 # Blender 4.5.4 LTS
 # www.blender.org
-mtllib pinoshojas.mtl
+mtllib PinosHojas.mtl
 o leaves
 v -23.210602 2.241045 24.287556
 v -23.490526 2.564375 24.017220

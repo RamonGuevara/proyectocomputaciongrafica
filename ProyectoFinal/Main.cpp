@@ -19,6 +19,17 @@
 #include "Texture.h"
 #include "Window.h"
 
+// --- Cámara y personaje principal ---
+bool thirdPerson = false;        // alternar vista (1ra / 3ra persona)
+float cameraDistance = 8.5f;     // distancia en 3ra persona
+
+glm::vec3 personajePos(0.0f, 0.0f, 0.0f);  // posición del personaje
+float personajeRot = 0.0f;                 // rotación Y del personaje (en grados)
+
+float moveSpeed = 4.0f;        // velocidad de desplazamiento
+float turnSpeed = 90.0f;       // grados/seg para girar
+bool followCharacter = true;   // si true, la cámara sigue al personaje
+
 // -----------------------------------------------------------------------------
 // declaracion de funciones auxiliares
 // -----------------------------------------------------------------------------
@@ -862,6 +873,29 @@ int main()
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // ---- Actualizar posición de la cámara según el modo ----
+        if (followCharacter) {
+            if (thirdPerson) {
+                glm::vec3 offset(
+                    -(cameraDistance * sin(glm::radians(personajeRot))),
+                    cameraDistance,
+                    -(cameraDistance * cos(glm::radians(personajeRot)))
+                );
+                camera.SetPosition(personajePos + offset);
+                camera.LookAt(personajePos + glm::vec3(0.0f, 5.0f, 0.0f));
+            }
+            else {
+                glm::vec3 headPos = personajePos + glm::vec3(0.0f, 3.0f, 0.0f);
+                glm::vec3 front(
+                    sin(glm::radians(personajeRot)),
+                    0.0f,
+                    cos(glm::radians(personajeRot))
+                );
+                camera.SetPosition(headPos + (front * 0.6f));
+                camera.LookAt(headPos + front);
+            }
+        }
 
         glm::mat4 projection = glm::perspective(
             glm::radians(camera.GetZoom()),
@@ -1840,30 +1874,80 @@ int main()
 // ============================================================================
 void ProcessInput(Window& window)
 {
-    if (window.IsKeyPressed(GLFW_KEY_W) || window.IsKeyPressed(GLFW_KEY_UP))
-        camera.ProcessKeyboard(FORWARD, deltaTime);
-    if (window.IsKeyPressed(GLFW_KEY_S) || window.IsKeyPressed(GLFW_KEY_DOWN))
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
-    if (window.IsKeyPressed(GLFW_KEY_A) || window.IsKeyPressed(GLFW_KEY_LEFT))
-        camera.ProcessKeyboard(LEFT, deltaTime);
-    if (window.IsKeyPressed(GLFW_KEY_D) || window.IsKeyPressed(GLFW_KEY_RIGHT))
-        camera.ProcessKeyboard(RIGHT, deltaTime);
-    // Movimiento vertical (subir/bajar cámara)
-    if (window.IsKeyPressed(GLFW_KEY_Z))
-        camera.ProcessKeyboard(UP, deltaTime);
-    if (window.IsKeyPressed(GLFW_KEY_X))
-        camera.ProcessKeyboard(DOWN, deltaTime);
-    // ---------------------------------------------------------
-    // movimiento de cámara (rotacion con el mouse)
-    // ---------------------------------------------------------
+    // --- Cámara libre (solo cuando NO sigue al personaje) ---
+    if (!followCharacter) {
+        if (window.IsKeyPressed(GLFW_KEY_W))
+            camera.ProcessKeyboard(FORWARD, deltaTime);
+        if (window.IsKeyPressed(GLFW_KEY_S))
+            camera.ProcessKeyboard(BACKWARD, deltaTime);
+        if (window.IsKeyPressed(GLFW_KEY_A))
+            camera.ProcessKeyboard(LEFT, deltaTime);
+        if (window.IsKeyPressed(GLFW_KEY_D))
+            camera.ProcessKeyboard(RIGHT, deltaTime);
+
+        if (window.IsKeyPressed(GLFW_KEY_Z))
+            camera.ProcessKeyboard(UP, deltaTime);
+        if (window.IsKeyPressed(GLFW_KEY_X))
+            camera.ProcessKeyboard(DOWN, deltaTime);
+    }
+
+    // --- Rotación de cámara con el mouse ---
     float xOffset = window.GetXChange();
     float yOffset = window.GetYChange();
-    if (xOffset != 0.0f || yOffset != 0.0f)
+    if (xOffset != 0.0f || yOffset != 0.0f) {
         camera.ProcessMouseMovement(xOffset, yOffset);
+    }
 
-    // ---------------------------------------------------------
-    // interacciones con el entorno / hábitats
-    // ---------------------------------------------------------
+    // --- Movimiento del personaje principal con flechas ---
+    if (window.IsKeyPressed(GLFW_KEY_UP)) {
+        float velocity = moveSpeed * deltaTime;
+        personajePos += glm::vec3(
+            sin(glm::radians(personajeRot)) * velocity,
+            0.0f,
+            cos(glm::radians(personajeRot)) * velocity
+        );
+    }
+
+    if (window.IsKeyPressed(GLFW_KEY_DOWN)) {
+        float velocity = moveSpeed * deltaTime;
+        personajePos -= glm::vec3(
+            sin(glm::radians(personajeRot)) * velocity,
+            0.0f,
+            cos(glm::radians(personajeRot)) * velocity
+        );
+    }
+
+    if (window.IsKeyPressed(GLFW_KEY_LEFT)) {
+        personajeRot += turnSpeed * deltaTime;
+    }
+
+    if (window.IsKeyPressed(GLFW_KEY_RIGHT)) {
+        personajeRot -= turnSpeed * deltaTime;
+    }
+
+    // --- Alternar modo de cámara: Q (1ª / 3ª persona) ---
+    static bool QPressed = false;
+    bool nowQ = window.IsKeyPressed(GLFW_KEY_Q);
+    if (nowQ && !QPressed) {
+        thirdPerson = !thirdPerson;
+        QPressed = true;
+    }
+    else if (!nowQ) {
+        QPressed = false;
+    }
+
+    // --- Alternar seguir personaje / cámara libre: E ---
+    static bool EPressed = false;
+    bool nowE = window.IsKeyPressed(GLFW_KEY_E);
+    if (nowE && !EPressed) {
+        followCharacter = !followCharacter;
+        EPressed = true;
+    }
+    else if (!nowE) {
+        EPressed = false;
+    }
+
+    // --- Puerta (tecla P) ---
     bool pNow = window.IsKeyPressed(GLFW_KEY_P);
     if (pNow && !puertaTogglePressed)
     {
@@ -1875,7 +1959,7 @@ void ProcessInput(Window& window)
         puertaTogglePressed = false;
     }
 
-    // Hábitat 1 (Acuático) - Tecla U
+    // --- Hábitat 1 (acuático) - tecla U ---
     bool uNow = window.IsKeyPressed(GLFW_KEY_U);
     if (uNow && !animacionH1TogglePressed) {
         animacionH1 = !animacionH1;
@@ -1885,41 +1969,19 @@ void ProcessInput(Window& window)
         animacionH1TogglePressed = false;
     }
 
-    // Ciervos (tecla B)
+    // --- Hábitat 2 (ciervos) - tecla B ---
     bool bNow = window.IsKeyPressed(GLFW_KEY_B);
     if (bNow && !animacionH2TogglePressed)
     {
-        // Cambiamos el estado de la animación
         animacionH2 = !animacionH2;
         animacionH2TogglePressed = true;
-
-        // Si ACABAMOS DE ENCENDER la animación,
-        // reseteamos TODO el estado del ciervo adulto
-        if (animacionH2)
-        {
-            // Posición y rotación
-            ciervoPos = ciervoHomePos;
-            ciervoRot = ciervoHomeRot;
-
-            // Pies y cabeza en neutro
-            RLegs = 0.0f;
-            FLegs = 0.0f;
-            head = 0.0f;
-            Ciervostep = false;
-
-
-            ciervoDir = 1;
-            ciervoTurning = false;
-            ciervoTurnLeft = 0.0f;
-            ciervoMoved = 0.0f;
-        }
     }
     else if (!bNow)
     {
         animacionH2TogglePressed = false;
     }
 
-    // Pajaros (tecla C)
+    // --- Pájaros (aviario) - tecla C ---
     bool cNow = window.IsKeyPressed(GLFW_KEY_C);
     if (cNow && !pajaro1TogglePressed)
     {
@@ -1933,7 +1995,7 @@ void ProcessInput(Window& window)
         pajaro1TogglePressed = false;
     }
 
-    // Hábitat 4 (Oso, Pingüino, Foca) (tecla Y)
+    // --- Hábitat 4 (Oso, Pingüino, Foca) - tecla Y ---
     bool yNow = window.IsKeyPressed(GLFW_KEY_Y);
     if (yNow && !animacionH4TogglePressed) {
         animacionH4 = !animacionH4;

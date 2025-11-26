@@ -9,8 +9,10 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/constants.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
-// Tipos de movimiento de cámara
+ // Tipos de movimiento de cámara
 enum Camera_Movement
 {
     FORWARD,
@@ -123,6 +125,36 @@ public:
     GLfloat GetZoom() const { return this->zoom; }
     glm::vec3 GetPosition() const { return this->position; }
     glm::vec3 GetFront() const { return this->front; }
+
+    // -------------------- MÉTODOS NUEVOS --------------------
+    // Fija la posición directamente
+    void SetPosition(const glm::vec3& pos) {
+        this->position = pos;
+    }
+
+    // Establece el vector front directamente (recalcula yaw/pitch y los vectores)
+    void SetFront(const glm::vec3& frontVec) {
+        // normalizamos y derivamos yaw/pitch a partir de front
+        glm::vec3 f = glm::normalize(frontVec);
+        this->front = f;
+
+        // pitch = asin(y)
+        this->pitch = glm::degrees(asin(glm::clamp(f.y, -1.0f, 1.0f)));
+
+        // yaw: cuidado con la convención usada en updateCameraVectors
+        // en updateCameraVectors: front.x = cos(yaw)*cos(pitch); front.z = sin(yaw)*cos(pitch)
+        // por lo tanto: yaw = atan2(front.z, front.x)
+        this->yaw = glm::degrees(atan2(f.z, f.x));
+
+        updateCameraVectors(); // recalcula right y up usando yaw/pitch consistentes
+    }
+
+    // Orienta la cámara para mirar a 'target' (similar a glm::lookAt)
+    void LookAt(const glm::vec3& target) {
+        glm::vec3 frontVec = glm::normalize(target - this->position);
+        SetFront(frontVec);
+    }
+    // --------------------------------------------------------
 
 private:
     // Atributos de cámara

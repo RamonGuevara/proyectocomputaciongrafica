@@ -1,6 +1,6 @@
 # Blender 4.5.4 LTS
 # www.blender.org
-mtllib pinosrama.mtl
+mtllib PinosRama.mtl
 o tree
 v -23.056612 -0.205482 23.940332
 v -23.123253 -0.203933 23.912771
