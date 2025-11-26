@@ -1,11 +1,18 @@
 #version 330 core
 
+out vec4 FragColor;
 in vec3 TexCoords;
-out vec4 color;
 
-uniform samplerCube skybox;
+uniform samplerCube skyboxDay;
+uniform samplerCube skyboxNight;
+uniform float blendFactor;
 
 void main()
 {
-    color = texture(skybox, TexCoords);
+    vec4 dayColor   = texture(skyboxDay, TexCoords);
+    vec4 nightColor = texture(skyboxNight, TexCoords);
+
+    // blendFactor = 1.0 -> noche
+    // blendFactor = 0.0 -> día
+    FragColor = mix(dayColor, nightColor, blendFactor);
 }

@@ -7,7 +7,7 @@
 class Window
 {
 public:
-    Window(GLuint width = 800, GLuint height = 600, const char* title = "Proyecto")
+    Window(GLuint width, GLuint height, const char* title = "Proyecto")
         : width(width), height(height),
         window(nullptr),
         lastX(width / 2.0f), lastY(height / 2.0f),

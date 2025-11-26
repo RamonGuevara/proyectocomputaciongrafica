@@ -18,6 +18,7 @@
 #include "Mesh.h"
 #include "Texture.h"
 #include "Window.h"
+#include "Skybox.h"
 
 // --- Cámara y personaje principal ---
 bool thirdPerson = false;        // alternar vista (1ra / 3ra persona)
@@ -362,7 +363,7 @@ int main()
     // -------------------------------------------------------------------------
     // creacion de la ventana y config OpenGL
     // -------------------------------------------------------------------------
-    Window window(1280, 720, "Proyecto Final");
+    Window window(1920, 1080, "Proyecto Final");
     if (window.GetGLFWwindow() == nullptr)
     {
         std::cerr << "Error al crear la ventana." << std::endl;
@@ -379,9 +380,6 @@ int main()
     lightingShader.Use();
     glUniform1i(glGetUniformLocation(lightingShader.Program, "texture_diffuse1"), 0);
     glUniform1i(glGetUniformLocation(lightingShader.Program, "texture_specular1"), 1);
-
-    skyboxShader.Use();
-    glUniform1i(glGetUniformLocation(skyboxShader.Program, "skybox"), 1);
 
     // -------------------------------------------------------------------------
     // carga de modelos del entorno general
@@ -509,77 +507,29 @@ int main()
     Model P_PiernaDer((char*)"Pierna_derecha.obj");
     Model P_PiernaIzq((char*)"Pierna_izquierda.obj");
 
-
-    // -------------------------------------------------------------------------
-    // geometría del skybox, un cubo unitario centrado en el origen
-    // -------------------------------------------------------------------------
-    // Se usa un cubo con tamaño 2x2x2 que luego se escala en el shader o en la matriz 'model'. Solo se almacenan posiciones de vertices.
-    GLfloat skyboxVertices[] = {
-        -1.0f,  1.0f, -1.0f,
-        -1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,
-         1.0f,  1.0f, -1.0f,
-        -1.0f,  1.0f, -1.0f,
-
-        -1.0f, -1.0f,  1.0f,
-        -1.0f, -1.0f, -1.0f,
-        -1.0f,  1.0f, -1.0f,
-        -1.0f,  1.0f, -1.0f,
-        -1.0f,  1.0f,  1.0f,
-        -1.0f, -1.0f,  1.0f,
-
-         1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,
-
-        -1.0f, -1.0f,  1.0f,
-        -1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
-        -1.0f, -1.0f,  1.0f,
-         1.0f, -1.0f,  1.0f,
-
-        -1.0f,  1.0f, -1.0f,
-         1.0f,  1.0f, -1.0f,
-         1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
-        -1.0f,  1.0f,  1.0f,
-        -1.0f,  1.0f, -1.0f,
-
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f,  1.0f,
-         1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f,  1.0f,
-         1.0f, -1.0f,  1.0f
+    // Rutas del cubemap de día
+    std::vector<const GLchar*> facesDay = {
+        "SkyBox/rightDay.png",
+        "SkyBox/leftDay.png",
+        "SkyBox/topDay.png",
+        "SkyBox/bottomDay.png",
+        "SkyBox/backDay.png",
+        "SkyBox/frontDay.png"
     };
 
-
-
-
-
-
-    // -----------------------------------------------------------------------------
-    // skybox: VAO/VBO y carga de cubemap
-    // -----------------------------------------------------------------------------
-    // creamos el VAO/VBO que contendra la geometría del cubo del skybox
-    GLuint skyboxVAO, skyboxVBO;
-    CrearObjetoSkyBox(skyboxVAO, skyboxVBO, skyboxVertices, sizeof(skyboxVertices));
-
-    std::vector<const GLchar*> faces = {
-        "SkyBox/right.jpg",
-        "SkyBox/left.jpg",
-        "SkyBox/top.jpg",
-        "SkyBox/bottom.jpg",
-        "SkyBox/back.jpg",
-        "SkyBox/front.jpg"
+    // Rutas del cubemap de noche
+    std::vector<const GLchar*> facesNight = {
+        "SkyBox/rightNight.png",
+        "SkyBox/leftNight.png",
+        "SkyBox/topNight.png",
+        "SkyBox/bottomNight.png",
+        "SkyBox/backNight.png",
+        "SkyBox/frontNight.png"
     };
 
-    GLuint cubemapTexture = TextureLoading::LoadCubemap(faces);
+    // Objeto skybox (usa el shader que ya tenías)
+    Skybox skybox(skyboxShader,facesDay, facesNight, 5.0f);
+
 
     // -----------------------------------------------------------------------------
     // geometría y recursos de la barda perimetral
@@ -870,15 +820,7 @@ int main()
 
     GLint shininessLoc = glGetUniformLocation(lightingShader.Program, "material.shininess");
     GLint transpLoc = glGetUniformLocation(lightingShader.Program, "transparency");
-
-    skyboxShader.Use();
-    GLint skyViewLoc = glGetUniformLocation(skyboxShader.Program, "view");
-    GLint skyProjLoc = glGetUniformLocation(skyboxShader.Program, "projection");
-
-
-
-
-
+    GLint dayFactorLoc = glGetUniformLocation(lightingShader.Program, "dayFactor");
 
     // -----------------------------------------------------------------------------
     // LOOP PRINCIPAL DE RENDER
@@ -891,6 +833,15 @@ int main()
         float currentFrame = (float)glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+
+        // -----------------------------------------------------------------
+        // Actualizar ciclo día/noche del skybox con el tiempo global
+        // y enviar el factor de día al shader de iluminación
+        // -----------------------------------------------------------------
+        skybox.Update(currentFrame);
+        float dayFactor = skybox.GetDayFactor();
+        if (dayFactorLoc >= 0)
+            glUniform1f(dayFactorLoc, dayFactor);
 
         window.PollEvents();
         ProcessInput(window);
@@ -1938,26 +1889,8 @@ int main()
         // ---------------------------------------------------------------------
         // skybox, entorno cubico alrededor de toda la escena
         // ---------------------------------------------------------------------
-        // ----- SKYBOX -----
-        // Se dibuja al final, con prueba de profundidad ajustada para que
-        // siempre aparezca "al fondo" sin interferir con la geometría del zoo.
-        glDepthFunc(GL_LEQUAL);
-        glDepthMask(GL_FALSE);
-        // Eliminamos la traslacion de la vista para que el skybox
-        // siempre rodee la cámara (solo rotación).
-        skyboxShader.Use();
-        glm::mat4 skyView = glm::mat4(glm::mat3(view));
-        glUniformMatrix4fv(skyViewLoc, 1, GL_FALSE, glm::value_ptr(skyView));
-        glUniformMatrix4fv(skyProjLoc, 1, GL_FALSE, glm::value_ptr(projection));
+        skybox.Render(view, projection);
 
-        glBindVertexArray(skyboxVAO);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
-
-        glDepthMask(GL_TRUE);
-        glDepthFunc(GL_LESS);
         window.SwapBuffers();
     }
 
