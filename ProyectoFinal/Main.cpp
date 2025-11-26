@@ -30,6 +30,20 @@ float moveSpeed = 4.0f;        // velocidad de desplazamiento
 float turnSpeed = 90.0f;       // grados/seg para girar
 bool followCharacter = true;   // si true, la cámara sigue al personaje
 
+// --- Animación de caminata del personaje ---
+bool  isWalking = false;  
+float walkTime = 0.0f;    // fase del ciclo de caminata
+float walkSpeed = 6.0f;    // velocidad del ciclo (rad/s aprox)
+
+float maxArmSwingDeg = 35.0f;   // amplitud máxima de brazos (grados)
+float maxLegSwingDeg = 25.0f;   // amplitud máxima de piernas (grados)
+
+// ángulos actuales (en grados) que usarán los modelos
+float armRightAngle = 0.0f;
+float armLeftAngle = 0.0f;
+float legRightAngle = 0.0f;
+float legLeftAngle = 0.0f;
+
 // -----------------------------------------------------------------------------
 // declaracion de funciones auxiliares
 // -----------------------------------------------------------------------------
@@ -484,6 +498,17 @@ int main()
     Model TucanTail((char*)"tucantail.obj");
     Model TucanPico1((char*)"tucanpicoup.obj");
     Model TucanPico2((char*)"tucanpicodown.obj");
+
+    // ---------------------------------------------------------
+    // MODELO DEL PERSONAJE PRINCIPAL (multipartes)
+    // ---------------------------------------------------------
+    Model P_Cabeza((char*)"Cabeza.obj");
+    Model P_Torso((char*)"Torso.obj");
+    Model P_BrazoDer((char*)"Brazo_derecho.obj");
+    Model P_BrazoIzq((char*)"Brazo_izquierdo.obj");
+    Model P_PiernaDer((char*)"Pierna_derecha.obj");
+    Model P_PiernaIzq((char*)"Pierna_izquierda.obj");
+
 
     // -------------------------------------------------------------------------
     // geometría del skybox, un cubo unitario centrado en el origen
@@ -1624,6 +1649,81 @@ int main()
             Banquitas.Draw(lightingShader);
         }
 
+        // ---------------------------------------------------------
+        // PERSONAJE PRINCIPAL COMPLETO (multipartes)
+        // ---------------------------------------------------------
+        {
+            // Transformación base del personaje (posición + rotación + escala)
+            glm::mat4 base = glm::mat4(1.0f);
+            base = glm::translate(base, personajePos);
+            base = glm::rotate(
+                base,
+                glm::radians(personajeRot),
+                glm::vec3(0.0f, 1.0f, 0.0f)
+            );
+            base = glm::scale(base, glm::vec3(0.004f));   // ajusta si queda muy grande/pequeño
+
+            // ----- TORSO -----
+            glm::mat4 torsoM = base;
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(torsoM));
+            P_Torso.Draw(lightingShader);
+
+            // ----- CABEZA -----
+            glm::mat4 headM = base;
+            headM = glm::translate(headM, glm::vec3(0.0f, 50.0f, 0.0f)); // offset vertical de la cabeza
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(headM));
+            P_Cabeza.Draw(lightingShader);
+
+            // ----- BRAZO DERECHO -----
+            glm::mat4 brazoDR = base;
+            // posición del hombro derecho (ajusta estos valores según tu modelo)
+            brazoDR = glm::translate(brazoDR, glm::vec3(-20.0f, 40.0f, 0.0f));
+            // rotación de péndulo (caminar) en eje X
+            brazoDR = glm::rotate(
+                brazoDR,
+                glm::radians(armRightAngle),
+                glm::vec3(1.0f, 0.0f, 0.0f)
+            );
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(brazoDR));
+            P_BrazoDer.Draw(lightingShader);
+
+            // ----- BRAZO IZQUIERDO -----
+            glm::mat4 brazoIZ = base;
+            brazoIZ = glm::translate(brazoIZ, glm::vec3(20.0f, 40.0f, 0.0f));
+            brazoIZ = glm::rotate(
+                brazoIZ,
+                glm::radians(armLeftAngle),
+                glm::vec3(1.0f, 0.0f, 0.0f)
+            );
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(brazoIZ));
+            P_BrazoIzq.Draw(lightingShader);
+
+            // ----- PIERNA DERECHA -----
+            glm::mat4 piernaDR = base;
+            // posición de la cadera derecha
+            piernaDR = glm::translate(piernaDR, glm::vec3(-10.0f, 10.0f, 0.0f));
+            piernaDR = glm::rotate(
+                piernaDR,
+                glm::radians(legRightAngle),
+                glm::vec3(1.0f, 0.0f, 0.0f)
+            );
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(piernaDR));
+            P_PiernaDer.Draw(lightingShader);
+
+            // ----- PIERNA IZQUIERDA -----
+            glm::mat4 piernaIZ = base;
+            piernaIZ = glm::translate(piernaIZ, glm::vec3(10.0f, 10.0f, 0.0f));
+            piernaIZ = glm::rotate(
+                piernaIZ,
+                glm::radians(legLeftAngle),
+                glm::vec3(1.0f, 0.0f, 0.0f)
+            );
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(piernaIZ));
+            P_PiernaIzq.Draw(lightingShader);
+        }
+
+
+
         // ---------------------------------------------------------------------
         // Mobiliario de iluminaciOn - Postes y lámparas (cubo + poste)
         // ---------------------------------------------------------------------
@@ -1898,6 +1998,8 @@ void ProcessInput(Window& window)
         camera.ProcessMouseMovement(xOffset, yOffset);
     }
 
+    bool moving = false;  // <--- NUEVO
+
     // --- Movimiento del personaje principal con flechas ---
     if (window.IsKeyPressed(GLFW_KEY_UP)) {
         float velocity = moveSpeed * deltaTime;
@@ -1906,6 +2008,7 @@ void ProcessInput(Window& window)
             0.0f,
             cos(glm::radians(personajeRot)) * velocity
         );
+        moving = true;   
     }
 
     if (window.IsKeyPressed(GLFW_KEY_DOWN)) {
@@ -1915,6 +2018,7 @@ void ProcessInput(Window& window)
             0.0f,
             cos(glm::radians(personajeRot)) * velocity
         );
+        moving = true;  
     }
 
     if (window.IsKeyPressed(GLFW_KEY_LEFT)) {
@@ -1924,6 +2028,9 @@ void ProcessInput(Window& window)
     if (window.IsKeyPressed(GLFW_KEY_RIGHT)) {
         personajeRot -= turnSpeed * deltaTime;
     }
+
+    // al final del bloque de movimiento:
+    isWalking = moving;
 
     // --- Alternar modo de cámara: Q (1ª / 3ª persona) ---
     static bool QPressed = false;
@@ -2456,6 +2563,27 @@ void Animation()
         piranhaRot = piraRotAngle;
     }
 
+    // --- Animación de caminata del personaje ---
+    if (isWalking) {
+        // avanzamos la fase del ciclo
+        walkTime += deltaTime * walkSpeed;
+
+        float s = sin(walkTime);   // [-1, 1]
+
+        // brazos van en fase contraria a las piernas
+        armRightAngle = maxArmSwingDeg * s;
+        armLeftAngle = -maxArmSwingDeg * s;
+
+        legRightAngle = -maxLegSwingDeg * s;
+        legLeftAngle = maxLegSwingDeg * s;
+    }
+    else {
+        // si no camina, relajamos poco a poco los ángulos hacia 0
+        armRightAngle *= 0.85f;
+        armLeftAngle *= 0.85f;
+        legRightAngle *= 0.85f;
+        legLeftAngle *= 0.85f;
+    }
 }
 
 // ============================================================================
