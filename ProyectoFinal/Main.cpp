@@ -822,6 +822,9 @@ int main()
     GLint transpLoc = glGetUniformLocation(lightingShader.Program, "transparency");
     GLint dayFactorLoc = glGetUniformLocation(lightingShader.Program, "dayFactor");
 
+    GLint alphaLoc = glGetUniformLocation(lightingShader.Program, "alpha");
+    GLint useFlatColorLoc = glGetUniformLocation(lightingShader.Program, "useFlatColor");
+
     // -----------------------------------------------------------------------------
     // LOOP PRINCIPAL DE RENDER
     // -----------------------------------------------------------------------------
@@ -836,12 +839,9 @@ int main()
 
         // -----------------------------------------------------------------
         // Actualizar ciclo día/noche del skybox con el tiempo global
-        // y enviar el factor de día al shader de iluminación
         // -----------------------------------------------------------------
         skybox.Update(currentFrame);
         float dayFactor = skybox.GetDayFactor();
-        if (dayFactorLoc >= 0)
-            glUniform1f(dayFactorLoc, dayFactor);
 
         window.PollEvents();
         ProcessInput(window);
@@ -888,67 +888,118 @@ int main()
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
         glUniform3fv(viewPosLoc, 1, glm::value_ptr(camera.GetPosition()));
 
-        // Luz direccional
-        float m = ambLightsOn ? 1.0f : 0.0f;
+        if (alphaLoc >= 0)        glUniform1f(alphaLoc, 1.0f);
+        if (useFlatColorLoc >= 0) glUniform1i(useFlatColorLoc, GL_FALSE);
+
+        // enviamos el factor día/noche desde el skybox
+        if (dayFactorLoc >= 0)
+            glUniform1f(dayFactorLoc, dayFactor);
+
+        // -------------------------------------------------
+        // FACTORES DE DÍA / NOCHE
+        // -------------------------------------------------
+        float day = dayFactor;           // 1.0 = mediodía
+        float night = 1.0f - dayFactor;    // 1.0 = medianoche
+
+        // Para encender/apagar luces desde el teclado
+        float mAmb = ambLightsOn ? 1.0f : 0.0f;  // luz global (sol/luna)
+        float mPoint = pointLightsOn ? 1.0f : 0.0f;  // lámparas (tecla L)
+
+        // -------------------------------------------------
+        // LUZ DIRECCIONAL (sol / luna) - PHONG
+        // -------------------------------------------------
         glUniform3f(dirDirLoc, -0.2f, -1.0f, -0.3f);
-        glUniform3f(dirAmbLoc, 0.5f * m, 0.5f * m, 0.5f * m);
-        glUniform3f(dirDifLoc, 0.5f * m, 0.5f * m, 0.5f * m);
-        glUniform3f(dirSpecLoc, 0.3f, 0.3f, 0.3f);
 
-        // Punto de luz
-        // factor: 1.0 = encendido, 0.0 = apagado
-        float k = pointLightsOn ? 1.0f : 0.0f;
+        // *** MÁS LUZ GLOBAL DE DÍA ***
+        glm::vec3 dirAmbDay = glm::vec3(0.40f, 0.38f, 0.36f); // ambiente día (subido)
+        glm::vec3 dirAmbNight = glm::vec3(0.04f, 0.05f, 0.08f); // ambiente noche, tenue
 
-        // Punto de luz 1
+        glm::vec3 dirDifDay = glm::vec3(1.05f, 1.00f, 0.95f); // difusa día (más fuerte)
+        glm::vec3 dirDifNight = glm::vec3(0.10f, 0.12f, 0.20f); // difusa noche, baja
+
+        glm::vec3 dirAmb = (day * dirAmbDay + night * dirAmbNight) * mAmb;
+        glm::vec3 dirDif = (day * dirDifDay + night * dirDifNight) * mAmb;
+
+        // specular moderado
+        glm::vec3 dirSpec = glm::vec3(0.35f) * mAmb;
+
+        glUniform3fv(dirAmbLoc, 1, glm::value_ptr(dirAmb));
+        glUniform3fv(dirDifLoc, 1, glm::value_ptr(dirDif));
+        glUniform3fv(dirSpecLoc, 1, glm::value_ptr(dirSpec));
+
+        // -------------------------------------------------
+        // PUNTUALES (FAROLES) - controlados por L
+        // -------------------------------------------------
+
+        float lampFactor = mPoint * (0.6f + 0.4f * night) * 5;
+        // -> 0.6 de día, 1.0 de noche, 0.0 si L está apagada
+
+        // atenuación estándar
+        float pConst = 1.0f;
+        float pLin = 0.09f;
+        float pQuad = 0.032f;
+
+        // color base ligeramente cálido
+        glm::vec3 lampColor = glm::vec3(1.0f, 0.95f, 0.9f);
+
+        // ---------- Point light 1 ----------
         glUniform3fv(pPosLoc, 1, glm::value_ptr(pointLightPositions[0]));
-        glUniform3f(pAmbLoc, 0.7f * k, 0.7f * k, 0.7f * k);
-        glUniform3f(pDifLoc, 0.7f * k, 0.7f * k, 0.7f * k);
-        glUniform3f(pSpecLoc, 1.0f * k, 1.0f * k, 1.0f * k);
-        glUniform1f(pConstLoc, 1.0f);
-        glUniform1f(pLinLoc, 0.04f);
-        glUniform1f(pQuadLoc, 0.02f);
+        glUniform3fv(pAmbLoc, 1, glm::value_ptr(lampColor * 0.12f * lampFactor));
+        glUniform3fv(pDifLoc, 1, glm::value_ptr(lampColor * 0.9f * lampFactor));
+        glUniform3fv(pSpecLoc, 1, glm::value_ptr(glm::vec3(1.0f) * lampFactor));
+        glUniform1f(pConstLoc, pConst);
+        glUniform1f(pLinLoc, pLin);
+        glUniform1f(pQuadLoc, pQuad);
 
-        // Punto de luz 2
+        // ---------- Point light 2 ----------
         glUniform3fv(pPosLoc1, 1, glm::value_ptr(pointLightPositions[1]));
-        glUniform3f(pAmbLoc1, 0.7f * k, 0.7f * k, 0.7f * k);
-        glUniform3f(pDifLoc1, 0.7f * k, 0.7f * k, 0.7f * k);
-        glUniform3f(pSpecLoc1, 1.0f * k, 1.0f * k, 1.0f * k);
-        glUniform1f(pConstLoc1, 1.0f);
-        glUniform1f(pLinLoc1, 0.04f);
-        glUniform1f(pQuadLoc1, 0.02f);
+        glUniform3fv(pAmbLoc1, 1, glm::value_ptr(lampColor * 0.10f * lampFactor));
+        glUniform3fv(pDifLoc1, 1, glm::value_ptr(lampColor * 0.85f * lampFactor));
+        glUniform3fv(pSpecLoc1, 1, glm::value_ptr(glm::vec3(1.0f) * lampFactor));
+        glUniform1f(pConstLoc1, pConst);
+        glUniform1f(pLinLoc1, pLin);
+        glUniform1f(pQuadLoc1, pQuad);
 
-        // Punto de luz 3
+        // ---------- Point light 3 ----------
         glUniform3fv(pPosLoc2, 1, glm::value_ptr(pointLightPositions[2]));
-        glUniform3f(pAmbLoc2, 0.8f * k, 0.8f * k, 0.8f * k);
-        glUniform3f(pDifLoc2, 0.8f * k, 0.8f * k, 0.8f * k);
-        glUniform3f(pSpecLoc2, 1.0f * k, 1.0f * k, 1.0f * k);
-        glUniform1f(pConstLoc2, 1.0f);
-        glUniform1f(pLinLoc2, 0.04f);
-        glUniform1f(pQuadLoc2, 0.02f);
+        glUniform3fv(pAmbLoc2, 1, glm::value_ptr(lampColor * 0.10f * lampFactor));
+        glUniform3fv(pDifLoc2, 1, glm::value_ptr(lampColor * 0.85f * lampFactor));
+        glUniform3fv(pSpecLoc2, 1, glm::value_ptr(glm::vec3(1.0f) * lampFactor));
+        glUniform1f(pConstLoc2, pConst);
+        glUniform1f(pLinLoc2, pLin);
+        glUniform1f(pQuadLoc2, pQuad);
 
-        // Punto de luz 4
+        // ---------- Point light 4 ----------
         glUniform3fv(pPosLoc3, 1, glm::value_ptr(pointLightPositions[3]));
-        glUniform3f(pAmbLoc3, 0.8f * k, 0.8f * k, 0.8f * k);
-        glUniform3f(pDifLoc3, 0.8f * k, 0.8f * k, 0.8f * k);
-        glUniform3f(pSpecLoc3, 1.0f * k, 1.0f * k, 1.0f * k);
-        glUniform1f(pConstLoc3, 1.0f);
-        glUniform1f(pLinLoc3, 0.04f);
-        glUniform1f(pQuadLoc3, 0.02f);
+        glUniform3fv(pAmbLoc3, 1, glm::value_ptr(lampColor * 0.10f * lampFactor));
+        glUniform3fv(pDifLoc3, 1, glm::value_ptr(lampColor * 0.85f * lampFactor));
+        glUniform3fv(pSpecLoc3, 1, glm::value_ptr(glm::vec3(1.0f) * lampFactor));
+        glUniform1f(pConstLoc3, pConst);
+        glUniform1f(pLinLoc3, pLin);
+        glUniform1f(pQuadLoc3, pQuad);
 
-        // ---------------------- spotlight (linterna de camara) -------------
+        // -------------------------------------------------
+        // SPOTLIGHT (linterna de la cámara) - más útil de noche
+        // -------------------------------------------------
+        float spotFactor = 0.4f + 0.6f * night;
+
         glUniform3fv(sPosLoc, 1, glm::value_ptr(camera.GetPosition()));
         glUniform3fv(sDirLoc, 1, glm::value_ptr(camera.GetFront()));
-        glUniform3f(sAmbLoc, 0.2f, 0.2f, 0.8f);
-        glUniform3f(sDifLoc, 0.2f, 0.2f, 0.8f);
-        glUniform3f(sSpecLoc, 0.0f, 0.0f, 0.0f);
+        glUniform3f(sAmbLoc, 0.0f, 0.0f, 0.0f);
+        glUniform3f(sDifLoc, 0.6f * spotFactor, 0.6f * spotFactor, 0.8f * spotFactor);
+        glUniform3f(sSpecLoc, 1.0f * spotFactor, 1.0f * spotFactor, 1.0f * spotFactor);
         glUniform1f(sConstLoc, 1.0f);
-        glUniform1f(sLinLoc, 0.3f);
-        glUniform1f(sQuadLoc, 0.7f);
+        glUniform1f(sLinLoc, 0.14f);
+        glUniform1f(sQuadLoc, 0.07f);
         glUniform1f(sCutLoc, glm::cos(glm::radians(12.0f)));
         glUniform1f(sOuterCutLoc, glm::cos(glm::radians(18.0f)));
 
-        glUniform1f(shininessLoc, 5.0f);
+        // -------------------------------------------------
+        // Material Phong clásico
+        // -------------------------------------------------
+        glUniform1f(shininessLoc, 32.0f);
         glUniform1i(transpLoc, 0);
+
 
         // -------------------------------------------------------------------------
         // dibujo del entorno (barda, piso, arco y puertas)

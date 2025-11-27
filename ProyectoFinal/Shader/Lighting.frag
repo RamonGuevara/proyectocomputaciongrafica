@@ -59,10 +59,13 @@ uniform SpotLight spotLight;
 uniform Material material;
 uniform int transparency;
 
-// === agregado: control fino de opacidad ===
-uniform float alpha;   // 0.0 totalmente transparente, 1.0 opaco
+// día/noche: 0.0 = noche, 1.0 = día
+uniform float dayFactor;
 
-// === agregado: color plano opcional (casa, pyraminx, etc.) ===
+// control fino de opacidad
+uniform float alpha;          // 0.0 transparente, 1.0 opaco
+
+// color plano opcional (casa, pyraminx, etc.)
 uniform bool useFlatColor;   // true => ignora textura difusa y usa flatColor
 uniform vec3 flatColor;
 
@@ -93,13 +96,19 @@ void main()
     // Spot light
     result += CalcSpotLight( spotLight, norm, FragPos, viewDir, baseColor );
 
+    // -------- AJUSTE GLOBAL DÍA/NOCHE SUAVE --------
+    // En vez de matar el color, solo usamos dayFactor para un toque:
+    // De noche apenas bajamos ligeramente el brillo, de día casi igual.
+    float globalLight = 0.7 + 0.3 * dayFactor; 
+    // noche = 0.7, día = 1.0
+    result *= globalLight;
+
     // Canal alpha: de la textura difusa, escalado por uniform alpha
     float texA = texture( material.diffuse, TexCoords ).a;
     float finalAlpha = texA * alpha;
 
     color = vec4( result, finalAlpha );
 
-    // Descartar fragmentos casi transparentes si transparency == 1
     if ( color.a < 0.1 && transparency == 1 )
         discard;
 }
@@ -118,7 +127,7 @@ vec3 CalcDirLight( DirLight light, vec3 normal, vec3 viewDir, vec3 baseColor )
     vec3 reflectDir = reflect( -lightDir, normal );
     float spec = pow( max( dot( viewDir, reflectDir ), 0.0 ), material.shininess );
 
-    // Textura de especular (sí se sigue tomando del mapa specular)
+    // Textura de especular
     vec3 specTex = texture( material.specular, TexCoords ).rgb;
 
     // Combine results
