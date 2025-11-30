@@ -113,10 +113,10 @@ float lastFrame = 0.0f;
 
 // posiciones de las luces dentro del zoologico
 glm::vec3 pointLightPositions[] = {
-    glm::vec3(25.0f, 7.0f, 0.0f),
-    glm::vec3(-25.0f, 7.0f, 2.0f),
-    glm::vec3(-1.0f, 7.0f, -23.0f),
-    glm::vec3(-1.0f, 7.0f, 7.0f)
+    glm::vec3(21.0f, 9.0f, 1.0f),
+    glm::vec3(-21.0f, 9.0f, 2.0f),
+    glm::vec3(-1.0f, 9.0f, -21.0f),
+    glm::vec3(-1.0f, 9.0f, 4.5f)
 };
 
 // luces puntuales on/off, el segundo parametro es para evitar rebotes al presionar la tecla
@@ -363,7 +363,7 @@ int main()
     // -------------------------------------------------------------------------
     // creacion de la ventana y config OpenGL
     // -------------------------------------------------------------------------
-    Window window(1920, 1080, "Proyecto Final");
+    Window window(1280, 720, "Proyecto Final");
     if (window.GetGLFWwindow() == nullptr)
     {
         std::cerr << "Error al crear la ventana." << std::endl;
@@ -1663,8 +1663,7 @@ int main()
                 glm::radians(personajeRot),
                 glm::vec3(0.0f, 1.0f, 0.0f)
             );
-            base = glm::scale(base, glm::vec3(0.004f));   // ajusta si queda muy grande/pequeño
-
+            base = glm::scale(base, glm::vec3(0.004f));   
             // ----- TORSO -----
             glm::mat4 torsoM = base;
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(torsoM));
@@ -2130,7 +2129,7 @@ void ProcessInput(Window& window)
 
 
 // ============================================================================
-//  Funcio Animation
+//  Funcion Animation
 //  Descripcion:
 //      Actualiza, en cada frame, el estado de las animaciones del zoológico:
 //        - Apertura/cierre de la puerta principal.
