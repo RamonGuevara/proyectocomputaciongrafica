@@ -390,6 +390,7 @@ int main()
     Model PuertaIzq((char*)"PuertaIzq.obj");
     Model Rejas((char*)"Rejas.obj");
     Model Cajas((char*)"cajas.obj");
+    Model Ardilla((char*)"ardilla.obj");
 
     // -------------------------------------------------------------------------
     // modelos del hábitat 2 - Ciervo adulto, aqui se declaran cuerpo y partes articuladas: cabeza y patas
@@ -1330,6 +1331,12 @@ int main()
             glm::mat4 model(1.0f);
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
             Banca.Draw(lightingShader);
+        }
+
+        {
+            glm::mat4 model(1.0f);
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            Ardilla.Draw(lightingShader);
         }
 
         // ---------------------------------------------------------------------
