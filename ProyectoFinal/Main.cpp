@@ -311,9 +311,26 @@ float piranhaRot = 0.0f;
 float piraRotAngle = 0.0f;      // acumulador de rotación
 float piraDirRot = 1.0f;      // +1 gira derecha, -1 gira izquierda
 
+// ----------------------------- animacion ardilla de bancas -----------------------------
+glm::vec3 ardilla(0.0f, 0.0f, 0.0f);
+bool animacionArdillas = false;
+bool animacionArdillasTogglePressed = false;
+// posición base para el “suelo” de la ardilla
+glm::vec3 ardillaBasePos(0.0f, 0.0f, 0.0f);
+//  estado interno de los brincos
+float ardillaPhase = 0.0f;   // fase del brinco 
+int   ardillaDir = +1;     // +1 adelante, -1 atrás
+int   ardillaJumpCount = 0;      // cuántos saltos lleva 
+
+// Parámetros de movimiento
+float ardillaJumpSpeed = 0.08f;  // qué tan rápido 
+float ardillaHorSpeed = 0.015f;  // avance horizontal 
+float ardillaJumpHeight = 0.2f;   // altura del brinco
 
 
-
+// ----------------------------- animacion ardilla de H1 -----------------------------
+float ardillarot = 0.0f;
+float ardillaColaDir = 1.0f;  // 1 = sube, -1 = baja
 
 // -----------------------------------------------------------------------------
 // matrices temporales para construir transformaciones, o sea model reutilizables
@@ -391,6 +408,10 @@ int main()
     Model Rejas((char*)"Rejas.obj");
     Model Cajas((char*)"cajas.obj");
     Model Ardilla((char*)"ardilla.obj");
+    Model Ardilla2((char*)"ardilla2cuerpo.obj");
+    Model Ardilla2cola((char*)"ardilla2cola.obj");
+    Model Botes((char*)"botesbasura.obj");
+    Model Nieve((char*)"rocasnieve1.obj");
 
     // -------------------------------------------------------------------------
     // modelos del hábitat 2 - Ciervo adulto, aqui se declaran cuerpo y partes articuladas: cabeza y patas
@@ -1332,11 +1353,42 @@ int main()
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
             Banca.Draw(lightingShader);
         }
+        // ----- ARDILLA -----
+        {
+            glm::mat4 model(1.0f);
+            model = glm::translate(model, ardilla);
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            Ardilla.Draw(lightingShader);
+        }
+        // ----- ARDILLA 2-----
+        {
+            glm::mat4 modelardilla2(1.0f);
+            modelardilla2 = glm::translate(modelardilla2, glm::vec3(-0.35f, 0.0f, 0.0f));
+            modelTemp = modelardilla2;
+            // Cuerpo
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelardilla2));
+            Ardilla2.Draw(lightingShader);
 
+            //cola
+            glm::mat4 model = modelTemp;
+            model = glm::translate(model, glm::vec3(-8.004f, 3.492f, 8.963f));
+            model = glm::rotate(model, glm::radians(ardillarot), glm::vec3(0.0f, 0.0f, 1.0f));
+            model = glm::translate(model, glm::vec3(8.004f, -3.492f, -8.963f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            Ardilla2cola.Draw(lightingShader);
+        }
+
+        // ----- BOTES DE BASURA -----
         {
             glm::mat4 model(1.0f);
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-            Ardilla.Draw(lightingShader);
+            Botes.Draw(lightingShader);
+        }
+        // ----- NIEVES -----
+        {
+            glm::mat4 model(1.0f);
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            Nieve.Draw(lightingShader);
         }
 
         // ---------------------------------------------------------------------
@@ -1960,7 +2012,7 @@ int main()
 //      Lee el estado del teclado y mouse desde la clase Window y actualiza:
 //        - Movimiento de la cámara (W, A, S, D, flechas, Z, X).
 //        - Rotación de la cámara con el mouse.
-//        - Toggles de animaciones por hábitat y luces (P, U, B, C, Y, L, O).
+//        - Toggles de animaciones por hábitat y luces (P, U, B, C, Y, L, O, R).
 // ============================================================================
 void ProcessInput(Window& window)
 {
@@ -2064,6 +2116,16 @@ void ProcessInput(Window& window)
     }
     else if (!uNow) {
         animacionH1TogglePressed = false;
+    }
+
+    // --- ARDILLAS - tecla R ---
+    bool rNow = window.IsKeyPressed(GLFW_KEY_R);
+    if (rNow && !animacionArdillasTogglePressed) {
+        animacionArdillas = !animacionArdillas;
+        animacionArdillasTogglePressed = true;
+    }
+    else if (!rNow) {
+        animacionArdillasTogglePressed = false;
     }
 
     // --- Hábitat 2 (ciervos) - tecla B ---
@@ -2574,6 +2636,75 @@ void Animation()
         legRightAngle *= 0.85f;
         legLeftAngle *= 0.85f;
     }
+    // ================== ARDILLA ==================
+    if (animacionArdillas) {
+        // Avanzar fase del brinco
+        ardillaPhase += ardillaJumpSpeed;
+        const float TWO_PI = 6.2831853f;
+        if (ardillaPhase >= TWO_PI) {
+            ardillaPhase -= TWO_PI;
+
+            // Terminó un brinco
+            ardillaJumpCount++;
+
+            // Después de 2 brincos, cambiar de dirección
+            if (ardillaJumpCount >= 2) {
+                ardillaJumpCount = 0;
+                ardillaDir *= -1;      // adelante <-> atrás
+            }
+        }
+
+        // Movimiento horizontal (2 adelante, 2 atrás, en bucle)
+        ardilla.z += ardillaHorSpeed * ardillaDir;
+        // Si prefieres en X:  ardilla.x += ardillaHorSpeed * ardillaDir;
+
+        // Movimiento vertical tipo brinco (curva suave)
+        float yOffset = fabsf(sinf(ardillaPhase)) * ardillaJumpHeight;
+        ardilla.y = ardillaBasePos.y + yOffset;
+
+
+        // -------- COLA ARDILLA 2 ------
+        const float colaSpeed = 1.5f;   // rápido/lento
+        const float colaMax = 25.0f;
+        const float colaMin = -25.0f;
+
+        ardillarot += ardillaColaDir * colaSpeed;
+
+        if (ardillarot >= colaMax) {
+            ardillarot = colaMax;
+            ardillaColaDir = -1.0f;    // ahora baja
+        }
+        else if (ardillarot <= colaMin) {
+            ardillarot = colaMin;
+            ardillaColaDir = 1.0f;     // ahora sube
+        }
+    }
+    else {
+        // Cuando se apaga la animación, que la ardilla baje suave al suelo
+        if (ardilla.y > ardillaBasePos.y) {
+            ardilla.y -= 0.1f;
+            if (ardilla.y < ardillaBasePos.y)
+                ardilla.y = ardillaBasePos.y;
+        }
+
+
+        // -------- COLA ARDILLA 2: regresar suavemente a 0 --------
+        const float colaReturnSpeed = 1.5f;
+
+        if (ardillarot > 0.0f) {
+            ardillarot -= colaReturnSpeed;
+            if (ardillarot < 0.0f) ardillarot = 0.0f;
+        }
+        else if (ardillarot < 0.0f) {
+            ardillarot += colaReturnSpeed;
+            if (ardillarot > 0.0f) ardillarot = 0.0f;
+        }
+
+        // al volver a 0 dejamos la dirección lista para empezar hacia arriba
+        if (ardillarot == 0.0f)
+            ardillaColaDir = 1.0f;
+    }
+    // ============================================
 }
 
 // ============================================================================
