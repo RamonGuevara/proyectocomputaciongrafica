@@ -1,4 +1,3 @@
-//Importacion de las bibliotecas necesarias
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -21,8 +20,8 @@
 #include "Skybox.h"
 
 // --- Cámara y personaje principal ---
-bool thirdPerson = false;        // alternar vista (1ra / 3ra persona)
-float cameraDistance = 8.5f;     // distancia en 3ra persona
+bool thirdPerson = true;        // alternar vista (1ra / 3ra persona)
+float cameraDistance = 10.0f;     // distancia en 3ra persona
 
 glm::vec3 personajePos(0.0f, 0.0f, 0.0f);  // posición del personaje
 float personajeRot = 0.0f;                 // rotación Y del personaje (en grados)
@@ -380,7 +379,7 @@ int main()
     // -------------------------------------------------------------------------
     // creacion de la ventana y config OpenGL
     // -------------------------------------------------------------------------
-    Window window(1280, 720, "Proyecto Final");
+    Window window(1920, 1080, "Proyecto Final");
     if (window.GetGLFWwindow() == nullptr)
     {
         std::cerr << "Error al crear la ventana." << std::endl;
@@ -522,12 +521,11 @@ int main()
     // ---------------------------------------------------------
     // MODELO DEL PERSONAJE PRINCIPAL (multipartes)
     // ---------------------------------------------------------
-    Model P_Cabeza((char*)"Cabeza.obj");
-    Model P_Torso((char*)"Torso.obj");
-    Model P_BrazoDer((char*)"Brazo_derecho.obj");
-    Model P_BrazoIzq((char*)"Brazo_izquierdo.obj");
-    Model P_PiernaDer((char*)"Pierna_derecha.obj");
-    Model P_PiernaIzq((char*)"Pierna_izquierda.obj");
+    Model P_Torso((char*)"PoBody.obj");
+    Model P_BrazoDer((char*)"BraDerPo.obj");
+    Model P_BrazoIzq((char*)"BraIzqPo.obj");
+    Model P_PiernaDer((char*)"PataDerPo.obj");
+    Model P_PiernaIzq((char*)"PataIzqPo.obj");
 
     // Rutas del cubemap de día
     std::vector<const GLchar*> facesDay = {
@@ -611,6 +609,7 @@ int main()
     GLuint cartelTextura = TextureLoading::LoadTexture("Textures/venadocartel.jpg");
     GLuint cartelTextura1 = TextureLoading::LoadTexture("Textures/carteloso.jpg");
     GLuint cartelTextura2 = TextureLoading::LoadTexture("Textures/cartelacuario.jpg");
+    GLuint TexturaPo = TextureLoading::LoadTexture("Textures/Po.png");
 
 
     // -----------------------------------------------------------------------------
@@ -872,16 +871,25 @@ int main()
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // ---- Actualizar posición de la cámara según el modo ----
         if (followCharacter) {
             if (thirdPerson) {
-                glm::vec3 offset(
-                    -(cameraDistance * sin(glm::radians(personajeRot))),
-                    cameraDistance,
-                    -(cameraDistance * cos(glm::radians(personajeRot)))
-                );
-                camera.SetPosition(personajePos + offset);
-                camera.LookAt(personajePos + glm::vec3(0.0f, 5.0f, 0.0f));
+                glm::vec3 backDir = glm::normalize(glm::vec3(
+                    -sinf(glm::radians(personajeRot)),
+                    0.0f,
+                    -cosf(glm::radians(personajeRot))
+                ));
+
+                float camHeight = 5.0f;
+                float lookAtHeight = 1.5f;
+
+                glm::vec3 camPos = personajePos
+                    - backDir * cameraDistance
+                    + glm::vec3(0.0f, camHeight, 0.0f);
+
+                glm::vec3 target = personajePos + glm::vec3(0.0f, lookAtHeight, 0.0f);
+
+                camera.SetPosition(camPos);
+                camera.LookAt(target);
             }
             else {
                 glm::vec3 headPos = personajePos + glm::vec3(0.0f, 3.0f, 0.0f);
@@ -900,7 +908,9 @@ int main()
             (float)window.GetBufferWidth() / (float)window.GetBufferHeight(),
             0.1f, 100.0f
         );
+
         glm::mat4 view = camera.GetViewMatrix();
+
 
         // -------------------------------------------------------------------------
         // shader de iluminacion: matrices, camara y configuración de luces
@@ -1711,77 +1721,47 @@ int main()
         }
 
         // ---------------------------------------------------------
-        // PERSONAJE PRINCIPAL COMPLETO (multipartes)
+        // PERSONAJE PRINCIPAL COMPLETO (Po multiparte)
         // ---------------------------------------------------------
         {
-            // Transformación base del personaje (posición + rotación + escala)
+            lightingShader.Use();
+
+            glDisable(GL_BLEND);
+            glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+            glUniform1f(glGetUniformLocation(lightingShader.Program, "alpha"), 1.0f);
+            glUniform1i(glGetUniformLocation(lightingShader.Program, "useFlatColor"), GL_FALSE);
+
             glm::mat4 base = glm::mat4(1.0f);
-            base = glm::translate(base, personajePos);
-            base = glm::rotate(
-                base,
-                glm::radians(personajeRot),
-                glm::vec3(0.0f, 1.0f, 0.0f)
-            );
-            base = glm::scale(base, glm::vec3(0.004f));   
-            // ----- TORSO -----
+            base = glm::translate(base, personajePos + glm::vec3(0.0f, 0.5f, 0.0f));
+            base = glm::rotate(base, glm::radians(personajeRot), glm::vec3(0.0f, 1.0f, 0.0f));
+            base = glm::scale(base, glm::vec3(1.0f));
+
             glm::mat4 torsoM = base;
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(torsoM));
             P_Torso.Draw(lightingShader);
 
-            // ----- CABEZA -----
-            glm::mat4 headM = base;
-            headM = glm::translate(headM, glm::vec3(0.0f, 50.0f, 0.0f)); // offset vertical de la cabeza
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(headM));
-            P_Cabeza.Draw(lightingShader);
-
-            // ----- BRAZO DERECHO -----
             glm::mat4 brazoDR = base;
-            // posición del hombro derecho (ajusta estos valores según tu modelo)
-            brazoDR = glm::translate(brazoDR, glm::vec3(-20.0f, 40.0f, 0.0f));
-            // rotación de péndulo (caminar) en eje X
-            brazoDR = glm::rotate(
-                brazoDR,
-                glm::radians(armRightAngle),
-                glm::vec3(1.0f, 0.0f, 0.0f)
-            );
+            brazoDR = glm::translate(brazoDR, glm::vec3(0.0f, 0.0f, 0.0f));
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(brazoDR));
             P_BrazoDer.Draw(lightingShader);
 
-            // ----- BRAZO IZQUIERDO -----
             glm::mat4 brazoIZ = base;
-            brazoIZ = glm::translate(brazoIZ, glm::vec3(20.0f, 40.0f, 0.0f));
-            brazoIZ = glm::rotate(
-                brazoIZ,
-                glm::radians(armLeftAngle),
-                glm::vec3(1.0f, 0.0f, 0.0f)
-            );
+            brazoIZ = glm::translate(brazoIZ, glm::vec3(0.0f, 0.0f, 0.0f));
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(brazoIZ));
             P_BrazoIzq.Draw(lightingShader);
 
-            // ----- PIERNA DERECHA -----
             glm::mat4 piernaDR = base;
-            // posición de la cadera derecha
-            piernaDR = glm::translate(piernaDR, glm::vec3(-10.0f, 10.0f, 0.0f));
-            piernaDR = glm::rotate(
-                piernaDR,
-                glm::radians(legRightAngle),
-                glm::vec3(1.0f, 0.0f, 0.0f)
-            );
+            piernaDR = glm::translate(piernaDR, glm::vec3(-0.2f, 0.1f, 0.0f));
+            piernaDR = glm::rotate(piernaDR, glm::radians(legRightAngle), glm::vec3(1.0f, 0.0f, 0.0f));
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(piernaDR));
             P_PiernaDer.Draw(lightingShader);
 
-            // ----- PIERNA IZQUIERDA -----
             glm::mat4 piernaIZ = base;
-            piernaIZ = glm::translate(piernaIZ, glm::vec3(10.0f, 10.0f, 0.0f));
-            piernaIZ = glm::rotate(
-                piernaIZ,
-                glm::radians(legLeftAngle),
-                glm::vec3(1.0f, 0.0f, 0.0f)
-            );
+            piernaIZ = glm::translate(piernaIZ, glm::vec3(0.2f, 0.1f, 0.0f));
+            piernaIZ = glm::rotate(piernaIZ, glm::radians(legLeftAngle), glm::vec3(1.0f, 0.0f, 0.0f));
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(piernaIZ));
             P_PiernaIzq.Draw(lightingShader);
         }
-
 
 
         // ---------------------------------------------------------------------
@@ -2043,7 +2023,7 @@ void ProcessInput(Window& window)
     bool moving = false;  // <--- NUEVO
 
     // --- Movimiento del personaje principal con flechas ---
-    if (window.IsKeyPressed(GLFW_KEY_UP)) {
+    if (window.IsKeyPressed(GLFW_KEY_DOWN)) {
         float velocity = moveSpeed * deltaTime;
         personajePos += glm::vec3(
             sin(glm::radians(personajeRot)) * velocity,
@@ -2053,7 +2033,7 @@ void ProcessInput(Window& window)
         moving = true;   
     }
 
-    if (window.IsKeyPressed(GLFW_KEY_DOWN)) {
+    if (window.IsKeyPressed(GLFW_KEY_UP)) {
         float velocity = moveSpeed * deltaTime;
         personajePos -= glm::vec3(
             sin(glm::radians(personajeRot)) * velocity,
@@ -2617,25 +2597,23 @@ void Animation()
 
     // --- Animación de caminata del personaje ---
     if (isWalking) {
-        // avanzamos la fase del ciclo
         walkTime += deltaTime * walkSpeed;
 
-        float s = sin(walkTime);   // [-1, 1]
+        float s = sin(walkTime);
 
-        // brazos van en fase contraria a las piernas
-        armRightAngle = maxArmSwingDeg * s;
-        armLeftAngle = -maxArmSwingDeg * s;
+        armRightAngle = 0.0f;
+        armLeftAngle = 0.0f;
 
         legRightAngle = -maxLegSwingDeg * s;
         legLeftAngle = maxLegSwingDeg * s;
     }
     else {
-        // si no camina, relajamos poco a poco los ángulos hacia 0
         armRightAngle *= 0.85f;
         armLeftAngle *= 0.85f;
         legRightAngle *= 0.85f;
         legLeftAngle *= 0.85f;
     }
+
     // ================== ARDILLA ==================
     if (animacionArdillas) {
         // Avanzar fase del brinco
