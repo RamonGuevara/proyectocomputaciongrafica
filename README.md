@@ -64,18 +64,31 @@ Proyecto/
 4. Ejecutar.
 
 ## 🎮 Controles
-| Acción | Tecla |
-|-------|-------|
-| Mover adelante | W |
-| Mover atrás | S |
-| Mover izquierda | A |
-| Mover derecha | D |
-| Subir | E |
-| Bajar | Q |
-| Primera/Tercera persona | C |
-| Seguir avatar | V |
-| Cámara | Mouse |
-| Salir | ESC |
+
+| Acción                                      | Tecla            |
+|---------------------------------------------|------------------|
+| Mover cámara adelante (modo libre)          | W                |
+| Mover cámara atrás (modo libre)             | S                |
+| Mover cámara a la izquierda (modo libre)    | A                |
+| Mover cámara a la derecha (modo libre)      | D                |
+| Subir cámara (modo libre)                   | Z                |
+| Bajar cámara (modo libre)                   | X                |
+| Mover avatar adelante                       | ↑ (flecha arriba)|
+| Mover avatar atrás                          | ↓ (flecha abajo) |
+| Girar avatar a la izquierda                 | ← (flecha izq.)  |
+| Girar avatar a la derecha                   | → (flecha der.)  |
+| Alternar primera / tercera persona          | Q                |
+| Alternar seguir avatar / cámara libre       | E                |
+| Abrir / cerrar puerta                       | P                |
+| Activar/desactivar hábitat 1 (acuático)     | U                |
+| Activar/desactivar ardillas                 | R                |
+| Activar/desactivar hábitat 2 (ciervos)      | B                |
+| Activar/desactivar pájaros (aviario)        | C                |
+| Activar/desactivar hábitat 4 (oso/pingüino/foca) | Y          |
+| Encender/apagar luces puntuales             | L                |
+| Encender/apagar luz ambiental               | O                |
+| Control de cámara (rotación)                | Mouse            |
+| Salir                                       | ESC              |
 
 ## 🧪 Validaciones
 - Iluminación Phong funcional.
