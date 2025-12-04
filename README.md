@@ -1,34 +1,34 @@
 # Proyecto Final – Zoológico Interactivo 3D en OpenGL
-**Gráficas Computacionales – 2026-1**  
+**Computación Gráfica e Interacción Humano Computadora – 2026-1**  
 **Tecnologías:** C++, OpenGL 3.3, GLFW, GLEW, Assimp, stb_image, GLM
 
-## 📌 Descripción General
+##  Descripción General
 Este proyecto implementa un entorno tridimensional interactivo que simula un zoológico completo con iluminación dinámica, ciclo día/noche, skybox doble, modelos 3D animados y un personaje principal navegable en primera y tercera persona. El sistema está construido desde cero utilizando el pipeline moderno de OpenGL e integra modelos FBX/OBJ mediante Assimp.
 
-## 🎮 Características Principales
-### 🌅 Skybox con transición día/noche
+##  Características Principales
+###  Skybox con transición día/noche
 - Mezcla automática entre cubemaps diurno y nocturno.
 - Independiente de la posición de la cámara.
 - Transiciones suaves sin artefactos.
 
-### 💡 Iluminación Realista
+###  Iluminación Realista
 - Modelo Phong con luz direccional, puntual y spotlight.
 - Atenuación física.
 - Materiales con mapas difusos y especulares.
 
-### 🧍‍♂️ Avatar Animado
+###  Avatar Animado (Po de Kung Fu Panda)
 - Personaje multiparte (torso y extremidades).
 - Movimiento de piernas basado en funciones armónicas.
 - Control en primera y tercera persona.
 
-### 🐾 Fauna Animada
+###  Fauna Animada
 - Pájaros, ciervos, oso y tiburón con trayectorias individuales.
 
-### 🌳 Entorno Completo
+###  Entorno Completo
 - Casa, árboles y objetos creados manualmente en OpenGL.
 - Modelos 3D importados mediante Assimp.
 
-## 🛠 Tecnologías Utilizadas
+##  Tecnologías Utilizadas
 - OpenGL 3.3 Core
 - GLFW
 - GLEW
@@ -57,13 +57,13 @@ Proyecto/
 └── Textures/
 ```
 
-## ▶️ Ejecución
+##  Ejecución
 1. Compilar en Visual Studio, GCC, MinGW o CLion.  
 2. Vincular: opengl32, glfw3, glew32, assimp.  
 3. Mantener la estructura de carpetas.  
 4. Ejecutar.
 
-## 🎮 Controles
+##  Controles
 
 | Acción                                      | Tecla            |
 |---------------------------------------------|------------------|
@@ -90,7 +90,7 @@ Proyecto/
 | Control de cámara (rotación)                |       Mouse      |
 | Salir                                       |        ESC       |
 
-## 🧪 Validaciones
+##  Validaciones
 - Iluminación Phong funcional.
 - Modelos correctamente cargados.
 - Texturas y UV correctos.
@@ -98,7 +98,7 @@ Proyecto/
 - Ciclo día/noche sin artefactos.
 - Fauna con trayectorias independientes.
 
-## 📘 Referencias (APA)
+##  Referencias (APA)
 Incluye bibliografía técnica:  
 - OpenGL Programming Guide  
 - OpenGL Superbible  
